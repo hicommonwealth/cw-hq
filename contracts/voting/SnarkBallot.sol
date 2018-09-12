@@ -1,8 +1,8 @@
 pragma solidity ^0.4.22;
 
-import './MerkleTree.sol';
-import './Verified.sol';
-import './SnarkUtil.sol';
+import '../crypto/MerkleTree.sol';
+import '../crypto/Verifier.sol';
+import '../crypto/SnarkUtil.sol';
 
 contract SnarkBallot is MerkleTree {
     Verifier public zksnark_verify;
@@ -30,4 +30,10 @@ contract SnarkBallot is MerkleTree {
     function votePrice(uint amount) constant returns (uint);
     function isRoot(bytes32 root) constant returns(bool);
     function nullifierToAddress(bytes32 source) returns(address);
+    function merge253bitWords(uint left, uint right) returns(bytes32);
+    function pad3bit(uint input) constant returns(uint);
+    function getZero(bytes32 x) returns(bytes32);
+    function padZero(bytes32 x) returns(bytes32);
+    function reverseByte(uint a) public pure returns (uint);
+    function reverse(bytes32 a) public pure returns(bytes32);
 }
