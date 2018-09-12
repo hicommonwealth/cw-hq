@@ -1,0 +1,1 @@
+const CommonwealthIdentity = artifacts.require("./CommonwealthIdentity.sol");
