@@ -2,6 +2,11 @@
 
 ## Abstract
 
+Identity is key to any protocol. After all, all protocols have users. However, relying on psuedoanynmous addresses falls short of solving core issues necessary for several classes of protocol interaction and governance scheme. Challenges of blockchain-based identity include but are not limited to privacy-preservation, ease of use, and general claims issuance.
+In this paper, we briefly discuss our attempts to address these issues. We begin with usable primatives for privacy-preservation and claims inssuance, then move towards discussion of a queryable API that interact with existing standards (namely 725 and 735), as well ways that protocols may benefit from our work. 
+
+## Introduction
+
 ## Privacy Tools
 
 Privacy is at the core of our ultimate goals. There are a variety of privacy enhancing tools already available on Ethereum, and we plan to take advantage of that as well as lead the dialogue for new tools. Currently, there are precompiled contracts for cryptographic primitives based upon elliptic curves. There are also utilities such as `ecrecover` that allow recovery of the signer's public key. These basic primitives allow us to develop privacy enhancing technology using:
@@ -49,7 +54,7 @@ Within this system, there are paths for obtaining public and private credentials
 
 ## Privacy System #3 - Curation market for credential issuers and claims
 
-Core to the privacy systems above is that of curating trusted third parties. While this system itself may not involved many privacy enhancing technologies past private voting, it should provide transparency to the evolution of verified credential issuers in the Commonwealth Protocol that are responsible for issuing privacy related claims on identities following ERC725 and ERC735 standards. There are two routes we plan to prioritize.
+Core to the privacy systems above is that of curating trusted third parties (TTP). While this system itself may not involved many privacy enhancing technologies past private voting, it should provide transparency to the evolution of verified credential issuers in the Commonwealth Protocol that are responsible for issuing privacy related claims on identities following ERC725 and ERC735 standards. There are two routes we plan to prioritize.
 
 **Decentralized Autonomous Organization for TTP curation**
 
@@ -90,6 +95,9 @@ In order to get usage we propose several services built on top of Commonwealth i
 
 ## Applications
 
+The identity service allows for individuals to 
+
+**Lending and insurance protocol usage**
 1. Describe how a lending or insurance protocol might use Commonwealth Identities [public identities]
   - Dharma relayers can now offer real-name loans (as opposed to pseudonymous loans)
   - Relayers and creditors can click through to see a identity/reputation history (how many loans they’ve offered/repaid, whether they’ve connected a Facebook, Twitter, etc.), as well as specify the type section of loans that they want to give.
@@ -114,7 +122,12 @@ In order to get usage we propose several services built on top of Commonwealth i
 
 ## Conclusion
 
-We have presented an identity service built upon the ERC725/ERC735 specifications, for accessing human-readable identities tied to blockchain addresses. In this paper, we have discussed details of its implementation, as well as specific applications towards financial services, gaming, and blockchain governance. Finally, we discuss how the protocol might be extended to support a rich ecosystem for identity and reputation.
+In this paper, we have discussed identity service built upon the ERC725/ERC735 specifications, for accessing human-readable identities tied to blockchain addresses. 
+
+
+details of its implementation, as well as specific applications towards financial services, gaming, and blockchain governance. 
+
+Finally, we discussed how the protocol might be extended to support a rich ecosystem for identity and reputation.
 
 ## References
 
