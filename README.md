@@ -2,7 +2,7 @@
 
 ## Abstract
 
-Identity is key to any protocol. After all, all protocols need users. However, relying on psuedoanynmous addresses falls short of solving core issues necessary for several classes of protocol interaction and governance scheme. Challenges of blockchain-based identity include but are not limited to privacy-preservation, ease of use, and general claims issuance.
+Identity is key to any protocol. After all, all protocols have users. However, relying on psuedoanynmous addresses falls short of solving core issues necessary for several classes of protocol interaction and governance scheme. Challenges of blockchain-based identity include but are not limited to privacy-preservation, ease of use, and general claims issuance.
 In this paper, we briefly discuss our attempts to address these issues. We begin with usable primatives for privacy-preservation and claims inssuance, then move towards discussion of a queryable API that interact with existing standards (namely 725 and 735), as well ways that protocols may benefit from our work. 
 
 ## Introduction
