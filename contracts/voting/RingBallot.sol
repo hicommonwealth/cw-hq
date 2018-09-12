@@ -3,7 +3,8 @@
 pragma solidity ^0.4.18;
 
 import '../crypto/LinkableRing.sol';
-import './ERC223ReceivingContract.sol';
+import '../token/ERC223ReceivingContract.sol';
+import '../token/ERC20Compatible.sol';
 
 /**
 * Each ring is given a globally unique ID which consist of:
@@ -47,7 +48,7 @@ contract RingBallot
         LinkableRing.Data ring;
 
         // Allow new rings to select commitment scheme
-        bool public usingCommitments;
+        bool usingCommitments;
 
         // Map public keys to commitments
         mapping (uint256 => bytes32) commitments;
@@ -88,7 +89,7 @@ contract RingBallot
         uint256 tag_x,
         address token,
         uint256 value,
-        bytes32 vote,
+        bytes32 vote
     );
 
     event RingBallotReveal(
@@ -96,7 +97,7 @@ contract RingBallot
         uint256 tag_x,
         address token,
         uint256 value,
-        bytes32 vote,
+        bytes32 vote
     );
 
     /**
@@ -107,7 +108,7 @@ contract RingBallot
     /**
     * A RingBallot Ring has been fully with withdrawn, the Ring is dead.
     */
-    event RingBallotDead( bytes32 indexed ring_id );
+    event RingBallotDead( bytes32 indexed ring_id, bytes32[] votes );
 
 
     function RingBallot()
@@ -141,7 +142,7 @@ contract RingBallot
 
         // Entry must be initialized only once
         require( 0 == entry.denomination );
-        require( entry.ring.Initialize(ring_guid) );
+        require( entry.ring.initialize(ring_guid) );
 
         entry.guid = ring_guid;
         entry.token = token;
@@ -251,7 +252,7 @@ contract RingBallot
     function revealWithEther(bytes32 ring_id, uint256 tag_x, bytes32 vote)
         public returns (bool)
     {
-        Data memory entry = voteLogic(ring_id, tag_x, tag_y, ctlist, commitment);
+        Data memory entry = revealLogic(ring_id, tag_x, vote);
         
         msg.sender.transfer(entry.denomination);
 
@@ -335,13 +336,13 @@ contract RingBallot
         // Without having to monitor/replay the RingDeposit events
         var ring_guid = entry.guid;
         m_pubx_to_ring[pub_x] = ring_guid;
-        RingBallotDeposit(ring_guid, pub_x, token, denomination);
+        emit RingBallotDeposit(ring_guid, pub_x, token, denomination);
 
         // When full, emit the GUID as the Ring Message
         // Participants need to sign this Message to Withdraw
         if(ring.isFull()) {
             delete m_filling[filling_id];
-            RingBallotReady(ring_guid, ring.message());
+            emit RingBallotReady(ring_guid, ring.message());
         }
 
         return ring_guid;
@@ -363,7 +364,7 @@ contract RingBallot
         // Tag must be added before withdraw
         ring.tagAdd(tag_x);
 
-        RingBallotVote(ring_id, tag_x, entry.token, entry.denomination, commitment);
+        emit RingBallotVote(ring_id, tag_x, entry.token, entry.denomination, commitment);
 
         // We want to return a copy of the entry in order to be able to access
         // the token and denomination fields of this object.
@@ -388,7 +389,7 @@ contract RingBallot
                     delete m_pubx_to_ring[ring.pubkeys[i].X];
                 }
                 // publish results of vote before deleting ring and its contents
-                RingBallotDead(ring_id, entry.votes);
+                emit RingBallotDead(ring_id, entry.votes);
                 delete m_rings[ring_id];
             }
         }
@@ -397,7 +398,9 @@ contract RingBallot
         return entrySaved;
     }
 
-    function revealLogic(bytes32 ring_id, uint256 tag_x, bytes32 vote) public returns (bool) {
+    function revealLogic(bytes32 ring_id, uint256 tag_x, bytes32 vote)
+        internal returns (Data)
+    {
         Data storage entry = m_rings[ring_id];
         LinkableRing.Data storage ring = entry.ring;
 
@@ -405,10 +408,10 @@ contract RingBallot
         require( entry.usingCommitments ); 
 
         // Require all commitments to be submitted
-        require( ring.IsDead() );
+        require( ring.isDead() );
 
         // Require public key to not have revealed yet in the ring
-        require( !entry.revealed[tag_x] )
+        require( !entry.revealed[tag_x] );
 
         // Require revealed vote to match committed vote under SHA3 of public key
         require( sha3(vote) == entry.commitments[tag_x] );
@@ -429,7 +432,7 @@ contract RingBallot
                 delete m_pubx_to_ring[ring.pubkeys[i].X];
             }
 
-            RingBallotDead(ring_id, entry.votes);
+            emit RingBallotDead(ring_id, entry.votes);
             delete m_rings[ring_id];
         }
 

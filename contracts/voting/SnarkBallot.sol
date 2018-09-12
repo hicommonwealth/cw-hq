@@ -2,7 +2,6 @@ pragma solidity ^0.4.22;
 
 import '../crypto/MerkleTree.sol';
 import '../crypto/Verifier.sol';
-import '../crypto/SnarkUtil.sol';
 
 contract SnarkBallot is MerkleTree {
     Verifier public zksnark_verify;
@@ -26,7 +25,7 @@ contract SnarkBallot is MerkleTree {
         uint[] input,
         bytes32 commitment
     ) returns (address);
-    function reveal(bytes32 vote) isCommit(commitAndReveal) returns (bool);
+    function reveal(bytes32 vote) returns (bool);
     function votePrice(uint amount) constant returns (uint);
     function isRoot(bytes32 root) constant returns(bool);
     function nullifierToAddress(bytes32 source) returns(address);

@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "openzeppelin-zos": "^1.9.4",
     "zos-lib": "^1.4.1"
   }
 }
