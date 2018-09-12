@@ -34,8 +34,89 @@ While this system itself may not involve many privacy enhancing technologies pas
 Adopted heavily from [Origin Protocol Implementation](https://github.com/OriginProtocol/origin-playground), we quickly present the ERC 725 and 735 standards.
 
 - ***ERC725***
+
+      pragma solidity ^0.4.22;
+      
+      contract ERC725 {
+      
+          uint256 constant MANAGEMENT_KEY = 1;
+          uint256 constant ACTION_KEY = 2;
+          uint256 constant CLAIM_SIGNER_KEY = 3;
+          uint256 constant ENCRYPTION_KEY = 4;
+      
+          event KeyAdded(bytes32 indexed key, uint256 indexed purpose, uint256 indexed keyType);
+          event KeyRemoved(bytes32 indexed key, uint256 indexed purpose, uint256 indexed keyType);
+          event ExecutionRequested(uint256 indexed executionId, address indexed to, uint256 indexed value, bytes data);
+          event Executed(uint256 indexed executionId, address indexed to, uint256 indexed value, bytes data);
+          event Approved(uint256 indexed executionId, bool approved);
+      
+          struct Key {
+              uint256 purpose; //e.g., MANAGEMENT_KEY = 1, ACTION_KEY = 2, etc.
+              uint256 keyType; // e.g. 1 = ECDSA, 2 = RSA, etc.
+              bytes32 key;
+          }
+      
+          function getKey(bytes32 _key) public constant returns(uint256 purpose, uint256 keyType, bytes32 key);
+          function getKeyPurpose(bytes32 _key) public constant returns(uint256 purpose);
+          function getKeysByPurpose(uint256 _purpose) public constant returns(bytes32[] keys);
+          function addKey(bytes32 _key, uint256 _purpose, uint256 _keyType) public returns (bool success);
+          function execute(address _to, uint256 _value, bytes _data) public returns (uint256 executionId);
+          function approve(uint256 _id, bool _approve) public returns (bool success);
+      }
+
 - ***ERC735***
+
+      pragma solidity ^0.4.22;
+      
+      contract ERC735 {
+      
+          event ClaimRequested(uint256 indexed claimRequestId, uint256 indexed claimType, uint256 scheme, address indexed issuer, bytes signature, bytes data, string uri);    event ClaimAdded(bytes32 indexed claimId, uint256 indexed claimType, address indexed issuer, uint256 signatureType, bytes32 signature, bytes claim, string uri);
+          event ClaimAdded(bytes32 indexed claimId, uint256 indexed claimType, uint256 scheme, address indexed issuer, bytes signature, bytes data, string uri);
+          event ClaimRemoved(bytes32 indexed claimId, uint256 indexed claimType, uint256 scheme, address indexed issuer, bytes signature, bytes data, string uri);
+          event ClaimChanged(bytes32 indexed claimId, uint256 indexed claimType, uint256 scheme, address indexed issuer, bytes signature, bytes data, string uri);
+      
+          struct Claim {
+              uint256 claimType;
+              uint256 scheme;
+              address issuer; // msg.sender
+              bytes signature; // this.address + claimType + data
+              bytes data;
+              string uri;
+          }
+      
+          function getClaim(bytes32 _claimId) public constant returns(uint256 claimType, uint256 scheme, address issuer, bytes signature, bytes data, string uri);
+          function getClaimIdsByType(uint256 _claimType) public constant returns(bytes32[] claimIds);
+          function addClaim(uint256 _claimType, uint256 _scheme, address issuer, bytes _signature, bytes _data, string _uri) public returns (bytes32 claimRequestId);
+          function removeClaim(bytes32 _claimId) public returns (bool success);
+      }
+
 - ***Keyholder***
+
+      pragma solidity ^0.4.22;
+      
+      import './ERC725.sol';
+      
+      contract KeyHolder is ERC725, ERC735 {
+      
+          uint256 executionNonce;
+      
+          struct Execution {
+              address to;
+              uint256 value;
+              bytes data;
+              bool approved;
+              bool executed;
+          }
+      
+          mapping (bytes32 => Key) keys;
+          mapping (uint256 => bytes32[]) keysByPurpose;
+          mapping (uint256 => Execution) executions;
+      
+          event ExecutionFailed(uint256 indexed executionId, address indexed to, uint256 indexed value, bytes data);
+      
+          function removeKey(bytes32 _key) public returns (bool success);
+          function keyHasPurpose(bytes32 _key, uint256 _purpose) public view returns(bool result);
+      }
 
 Now, we define a standard claims interface that adhere to the above interface.
 
