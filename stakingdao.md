@@ -1,26 +1,18 @@
 # Staking DAO
 ## Background
 
----
-
-If we're going to have a world where coordination happens mainly in DAOs and protocols, then we need to actually have experiments where these actually are in product
+If we're going to have a world where coordination happens mainly in DAOs and protocols, then we need to actually have experiments where these actually are in product in use.
 
 ## Why?
-
----
 
 Each Transcoder DAO Token is
 
 - A claim on the cash flow
 - A voting right for what the params should be.
 
-This token becomes a tradable ERC20 Token. Other people who do not want to participate in this DAO are still free to delegate stake to DAO. They are free to withdraw their token, without any restrictions. The downside is that they do not have an asset that is liquid, the tradeable ERC20 Token. On top of this token, people can now create derivatives products, bonds, that are rights to cash flows. 
+This token becomes a tradable ERC20 Token. Other people who do not want to participate in this DAO are still free to delegate stake to DAO. They are free to withdraw their token, without any restrictions. The downside is that they do not have an asset that is liquid, the tradeable ERC20 Token. On top of this token, people can now create derivatives products, bonds, that are rights to cash flows. This is an early experiment for larger DAOs. This is repeatable as any worker/stake based protocol should be able to run as a DAO.
 
-This is an early experiment for larger DAOs. This is repeatable.
-
-## Requirements
-
----
+## Secifications
 
 - Mint at vote token at a one-to-one ratio in exchange for staked token.
 - Vote on `msg.sender` who is actually running the transcoder, allow him to have more tokens.
@@ -34,14 +26,10 @@ This is an early experiment for larger DAOs. This is repeatable.
 
 # **Current Limitation**
 
----
-
 - The only limitation for the protocol that we are build for (Livepeer) is that the protocol does not allow withdraws to a cold wallet/smart contract address this is something that Doug and co are working on.
 - Funds will be withdrawn every single week, and moved to the this fund wallet, where individuals can then vote to direct funds towards
 
 # Questions
-
----
 
 - Key management
 - Returning tokens that are not of the specified delegated token type
@@ -50,8 +38,6 @@ This is an early experiment for larger DAOs. This is repeatable.
   - Hardcode this address in and add a modifier before committing to a function call.
 
 # Future Work
-
----
 
 There are many different experiments to be run. Our approach is again to build to spec/specific use case and generalize from there.
 
@@ -71,8 +57,6 @@ Additionally, different DAOs can be created within one ecosystem for a different
 - **Funding DAO.** DAO with voting rights on where to direct funds for development of a protocol. Within the Livepeer Protocol, there is a slashing pool, this may be an ideal place to allow to start. Perhaps we can mint vote tokens given to the active transcoder set in proportion
 
 ## References
-
----
 
 - [https://research.aragon.org/t/staking-pool-daos/136](https://research.aragon.org/t/staking-pool-daos/136)
 - [https://blog.aragon.org/aragon-labs-research-update-1/](https://blog.aragon.org/aragon-labs-research-update-1/)
