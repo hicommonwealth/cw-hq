@@ -1,7 +1,6 @@
 import Promise from 'bluebird';
 import assertRevert from '../helpers/assertRevert';
 import decodeLogs from '../helpers/decodeLogs';
-import { TestApp } from 'zos';
 
 const IdentityCouncil = artifacts.require("./IdentityCouncil.sol");
 
@@ -19,7 +18,6 @@ contract('IdentityCouncil', (accounts) => {
   })
 
   beforeEach(async () => {
-    app = await TestApp({ from: accounts[0] });
     contract = await IdentityCouncil.new();
   });
 
@@ -68,7 +66,7 @@ contract('IdentityCouncil', (accounts) => {
   it('should fail to create proposal without paying sybil fee', async function () {
     const voteTypeAddition = true;
     await contract.initialize(sybilAmt, quorumPt, trustedI);
-    await assertRevert(contract.propose(accounts[1], voteTypeAddition, {
+    await assertRevert(contract.proposeCandidate(accounts[1], voteTypeAddition, {
       from: accounts[1],
       value: 0,
     }));
@@ -77,68 +75,68 @@ contract('IdentityCouncil', (accounts) => {
   it('should fail to create a proposal with a zero valued address', async function () {
     const voteTypeAddition = true;
     await contract.initialize(sybilAmt, quorumPt, trustedI);
-    await assertRevert(contract.propose(0, voteTypeAddition, {
+    await assertRevert(contract.proposeCandidate(0, voteTypeAddition, {
       from: accounts[1],
       value: 1,
     }));
   });
 
-  it('should fail to propose the same candidate for addition', async function () {
+  it('should fail to proposeCandidate the same candidate for addition', async function () {
     const voteTypeAddition = true;
     await contract.initialize(sybilAmt, quorumPt, trustedI);
-    await contract.propose(accounts[1], voteTypeAddition, {
+    await contract.proposeCandidate(accounts[1], voteTypeAddition, {
       from: accounts[1],
       value: 1,
     });
 
-    await assertRevert(contract.propose(accounts[1], voteTypeAddition, {
+    await assertRevert(contract.proposeCandidate(accounts[1], voteTypeAddition, {
       from: accounts[1],
       value: 1,
     }));
   });
 
-  it('should fail to propose the same candidate for addition then removal', async function () {
+  it('should fail to proposeCandidate the same candidate for addition then removal', async function () {
     const voteTypeAddition = true;
     await contract.initialize(sybilAmt, quorumPt, trustedI);
-    await contract.propose(accounts[1], voteTypeAddition, {
+    await contract.proposeCandidate(accounts[1], voteTypeAddition, {
       from: accounts[1],
       value: 1,
     });
 
-    await assertRevert(contract.propose(accounts[1], !voteTypeAddition, {
+    await assertRevert(contract.proposeCandidate(accounts[1], !voteTypeAddition, {
       from: accounts[1],
       value: 1,
     }));
   });
 
-  it('should fail to propose a non council member for removal', async function () {
+  it('should fail to proposeCandidate a non council member for removal', async function () {
     const voteTypeRemoval = false;
     await contract.initialize(sybilAmt, quorumPt, trustedI);
-    await assertRevert(contract.propose(accounts[1], voteTypeRemoval, {
+    await assertRevert(contract.proposeCandidate(accounts[1], voteTypeRemoval, {
       from: accounts[1],
       value: 1,
     }));
   });
 
-  it('should fail to propose a council member for removal twice', async function() {
+  it('should fail to proposeCandidate a council member for removal twice', async function() {
     const voteTypeRemoval = false;
     await contract.initialize(sybilAmt, quorumPt, trustedI);
-    await contract.propose(accounts[0], voteTypeRemoval, {
+    await contract.proposeCandidate(accounts[0], voteTypeRemoval, {
       from: accounts[0],
       value: 1,
     });
 
-    await assertRevert(contract.propose(accounts[0], voteTypeRemoval, {
+    await assertRevert(contract.proposeCandidate(accounts[0], voteTypeRemoval, {
       from: accounts[0],
       value: 1,
     }));
   });
 
-  it('should fail to propose a council member for addition', async function() {
+  it('should fail to proposeCandidate a council member for addition', async function() {
     const voteTypeAddition = true;
     await contract.initialize(sybilAmt, quorumPt, trustedI);
 
-    await assertRevert(contract.propose(accounts[0], voteTypeAddition, {
+    await assertRevert(contract.proposeCandidate(accounts[0], voteTypeAddition, {
       from: accounts[0],
       value: 1,
     }));
@@ -149,7 +147,7 @@ contract('IdentityCouncil', (accounts) => {
     await contract.initialize(sybilAmt, quorumPt, trustedI);
 
     const beforeBalance = await getBalance(contract.address);
-    await contract.propose(accounts[1], voteTypeAddition, {
+    await contract.proposeCandidate(accounts[1], voteTypeAddition, {
       from: accounts[1],
       value: 2,
     });
@@ -161,92 +159,92 @@ contract('IdentityCouncil', (accounts) => {
   it('should fail to allow non-council members to vote on proposals', async function() {
     const voteTypeAddition = true;
     await contract.initialize(sybilAmt, quorumPt, trustedI);
-    await contract.propose(accounts[1], voteTypeAddition, {
+    await contract.proposeCandidate(accounts[1], voteTypeAddition, {
       from: accounts[1],
       value: 1,
     });
 
-    await assertRevert(contract.vote(1, { from: accounts[1] }));
+    await assertRevert(contract.voteOnCandidateProposal(1, { from: accounts[1] }));
   });
 
   it('should fail to vote on a proposal that is non-existant', async function () {
     await contract.initialize(sybilAmt, quorumPt, trustedI);
-    await assertRevert(contract.vote(1, { from: accounts[0] }));
+    await assertRevert(contract.voteOnCandidateProposal(1, { from: accounts[0] }));
   });
 
   it('should fail to vote on a closed (deleted) proposal twice from the same account', async function () {
     const voteTypeAddition = true;
     await contract.initialize(sybilAmt, quorumPt, trustedI);
-    await contract.propose(accounts[1], voteTypeAddition, {
+    await contract.proposeCandidate(accounts[1], voteTypeAddition, {
       from: accounts[1],
       value: 1,
     });
 
-    await contract.vote(1, { from: accounts[0] });
-    await assertRevert(contract.vote(1, { from: accounts[0] }));
+    await contract.voteOnCandidateProposal(1, { from: accounts[0] });
+    await assertRevert(contract.voteOnCandidateProposal(1, { from: accounts[0] }));
   });
 
   it('should vote and add a new council member', async function() {
     const voteTypeAddition = true;
     await contract.initialize(sybilAmt, quorumPt, trustedI);
     assert.equal((await contract.getCouncilSize()).toNumber(), 1);
-    await contract.propose(accounts[1], voteTypeAddition, {
+    await contract.proposeCandidate(accounts[1], voteTypeAddition, {
       from: accounts[1],
       value: 1,
     });
 
-    await contract.vote(1, { from: accounts[0] });
+    await contract.voteOnCandidateProposal(1, { from: accounts[0] });
     assert.equal((await contract.getCouncilSize()).toNumber(), 2);
   });
 
   it('should fail to vote on adding existing council members', async function () {
-    trustedI = [accounts[1]];
+    const trustedIds = [accounts[1]];
 
     const voteTypeAddition = true;
-    await contract.initialize(sybilAmt, quorumPt, trustedI);
+    await contract.initialize(sybilAmt, quorumPt, trustedIds);
     assert.equal((await contract.getCouncilSize()).toNumber(), 2);
-    await assertRevert(contract.propose(accounts[1], voteTypeAddition, {
+    await assertRevert(contract.proposeCandidate(accounts[1], voteTypeAddition, {
       from: accounts[1],
       value: 1,
     }));
   });
 
   it('should fail to vote on an open proposal twice from the same account', async function () {
-    trustedI = [accounts[1], accounts[2], accounts[3]];
+    const trustedIds = [accounts[1], accounts[2], accounts[3]];
 
     const voteTypeAddition = true;
-    await contract.initialize(sybilAmt, quorumPt, trustedI);
+    await contract.initialize(sybilAmt, quorumPt, trustedIds);
     assert.equal((await contract.getCouncilSize()).toNumber(), 4);
-    await contract.propose(accounts[4], voteTypeAddition, {
+    await contract.proposeCandidate(accounts[4], voteTypeAddition, {
       from: accounts[1],
       value: 1,
     });
 
-    await contract.vote(1, { from: accounts[0] });
+    await contract.voteOnCandidateProposal(1, { from: accounts[0] });
     assert.equal((await contract.getCouncilSize()).toNumber(), 4);
 
-    await assertRevert(contract.vote(1, { from: accounts[0] }));
+    await assertRevert(contract.voteOnCandidateProposal(1, { from: accounts[0] }));
   });
 
   it('should remove a council member', async function () {
     const voteTypeAddition = true;
     await contract.initialize(sybilAmt, quorumPt, trustedI);
     assert.equal((await contract.getCouncilSize()).toNumber(), 1);
-    await contract.propose(accounts[1], voteTypeAddition, {
+    await contract.proposeCandidate(accounts[1], voteTypeAddition, {
       from: accounts[1],
       value: 1,
     });
 
-    await contract.vote(1, { from: accounts[0] });
+    await contract.voteOnCandidateProposal(1, { from: accounts[0] });
     assert.equal((await contract.getCouncilSize()).toNumber(), 2);
 
     const voteTypeRemoval = false;
-    await contract.propose(accounts[1], voteTypeRemoval, {
+    await contract.proposeCandidate(accounts[1], voteTypeRemoval, {
       from: accounts[0],
       value: 1,
     });
 
-    await contract.vote(2, { from: accounts[0] });
+    await contract.voteOnCandidateProposal(2, { from: accounts[0] });
     assert.equal((await contract.getCouncilSize()).toNumber(), 1);
   });
 });

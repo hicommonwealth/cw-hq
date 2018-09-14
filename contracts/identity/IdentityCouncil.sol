@@ -4,29 +4,19 @@ import "zos-lib/contracts/migrations/Initializable.sol";
 import "openzeppelin-zos/contracts/math/SafeMath.sol";
 
 contract IdentityCouncil is Initializable {
-    struct Proposal {
+    struct CandidateProposal {
         address candidate;
         uint voteCount;
-
-        // true for add, false for remove
-        bool voteType;
+        bool voteType; // true for add, false for remove
     }
 
     mapping (address => uint) public councilIndex;    
     mapping (address => uint) public councilMemberWeight;
-    mapping (address => mapping (uint => bool)) public votedOnProposal;
-
-    // Proposal candidates are indicated by numeric values
-    // The motivation for this is to prevent candidates who
-    // aren't council members from being removed and to prevent
-    // council members from being added redundantly.
-    // 1 -> voteType = addition
-    // 2 -> voteType = removal
-    mapping (address => uint) public proposalCandidates;
-    
+    mapping (address => mapping (uint => bool)) public votedOnCandidateProposal;
+    mapping (address => bool) public candidateProposalExists;
     
     address[] council;
-    Proposal[] proposals;
+    CandidateProposal[] candidateProposals;
 
     // Amount of money to deposit when adding a new proposal
     uint256 public sybilResistantThresholdValue;
@@ -37,10 +27,9 @@ contract IdentityCouncil is Initializable {
     event CouncilSetup(uint256 sybilResistantThresholdValue, uint256 quorumThreshold, address[] council);
     event CouncilMemberAdded(address member, uint count);
     event CouncilMemberRemoved(address member, uint count);
-    event ProposalCreated(address candidate, uint proposalIndex, uint payment);
-    event ProposalVotedOn(address candidate, uint voteCount, bool voteType);
-    event Value(uint one, uint two);
-    event LogProposal(address candidate, uint voteCount, bool voteType);
+
+    event CandidateProposalCreated(address candidate, uint proposalIndex, uint payment);
+    event CandidateProposalVotedOn(address candidate, uint voteCount, bool voteType);
 
     function initialize(uint256 sybilAmt, uint256 quorumPt, address[] trusted) isInitializer public {
         require ( quorumPt > 0 && quorumPt <= 100);
@@ -48,50 +37,50 @@ contract IdentityCouncil is Initializable {
         sybilResistantThresholdValue = sybilAmt;
         quorumThreshold = quorumPt;
 
-        proposals.length++;
+        candidateProposals.length++;
         council.length++;
-        add(msg.sender);
+        addCouncilMember(msg.sender);
 
         if (trusted.length > 0) {
             for (uint i = 0; i < trusted.length; i++) {
-                add(trusted[i]);
+                addCouncilMember(trusted[i]);
             }
         }
 
         emit CouncilSetup(sybilResistantThresholdValue, quorumThreshold, getCouncil());
     }
 
-    function vote(uint proposalIndex) isCouncilMember public {
+    function voteOnCandidateProposal(uint proposalIndex) isCouncilMember public {
         require( proposalIndex != 0 );
-        require( proposals.length - 1 >= proposalIndex );
+        require( candidateProposals.length - 1 >= proposalIndex );
 
         address sender = council[councilIndex[msg.sender]];
-        require( !votedOnProposal[sender][proposalIndex] );
+        require( !votedOnCandidateProposal[sender][proposalIndex] );
 
-        Proposal memory p = proposals[proposalIndex];
+        CandidateProposal memory p = candidateProposals[proposalIndex];
 
         // Assert the proposal has not been deleted at this index
-        // so that completed proposals do not receive votes after
+        // so that completed candidateProposals do not receive votes after
         require( p.candidate != address(0x0) );
 
         p.voteCount += councilMemberWeight[sender];
-        votedOnProposal[sender][proposalIndex] = true;
+        votedOnCandidateProposal[sender][proposalIndex] = true;
 
         if (isVoteSuccess(p.voteCount)) {
             if (p.voteType) {
-                add(p.candidate);                
+                addCouncilMember(p.candidate);                
             } else {
-                remove(p.candidate);
+                removeCouncilMember(p.candidate);
             }
 
-            delete proposals[proposalIndex];
-            delete proposalCandidates[p.candidate];
+            delete candidateProposals[proposalIndex];
+            delete candidateProposalExists[p.candidate];
         }
 
-        emit ProposalVotedOn(p.candidate, p.voteCount, p.voteType);
+        emit CandidateProposalVotedOn(p.candidate, p.voteCount, p.voteType);
     }
 
-    function add(address candidate) internal {
+    function addCouncilMember(address candidate) internal {
         require( candidate != address(0x0) );
 
         // If candidate is already council member, do nothing
@@ -107,7 +96,7 @@ contract IdentityCouncil is Initializable {
         emit CouncilMemberAdded(candidate, getCouncilSize());
     }
 
-    function remove(address candidate) internal {
+    function removeCouncilMember(address candidate) internal {
         uint index = councilIndex[candidate];
         delete council[index];
         delete councilIndex[candidate];
@@ -116,34 +105,31 @@ contract IdentityCouncil is Initializable {
         emit CouncilMemberRemoved(candidate, getCouncilSize());
     }
 
-    function propose(address candidate, bool voteType) payable public {
+    function proposeCandidate(address candidate, bool voteType) payable public {
         require( candidate != address(0x0) );
+
+        // A proposal must pay the sybil fee
         require( msg.value >= sybilResistantThresholdValue );
 
-        if (voteType) {
-            // A proposal to add a candidate should fail if the candidate is in the council
-            require( councilIndex[candidate] == 0 );
+        // There should not exist an open proposal to add or remove a candidate
+        require( !candidateProposalExists[candidate] );
 
-            // There should not exist an open proposal to add or remove a candidate
-            require( proposalCandidates[candidate] == 0 );
-        } else {
-            // A proposal to remove a candidate should fail if the candidate is not in the council
-            require( councilIndex[candidate] > 0 );
+        // A proposal to add (remove) a candidate should 
+        // fail if the candidate is in (not in) the council 
+        require( (voteType)
+            ? (councilIndex[candidate] == 0) 
+            : councilIndex[candidate] > 0
+        );
 
-            // There should not exist an open proposal to add or remove a candidate
-            require( proposalCandidates[candidate] == 0 );
-        }
-
-        proposals.push(Proposal({
+        candidateProposals.push(CandidateProposal({
             candidate: candidate,
             voteType: voteType,
             voteCount: 0
         }));
 
-        // TODO: Remove this and supplemental logic if possible
-        proposalCandidates[candidate] = (voteType) ? 1 : 2;
 
-        emit ProposalCreated(candidate, proposals.length - 1, msg.value);
+        emit CandidateProposalCreated(candidate, candidateProposals.length - 1, msg.value);
+        candidateProposalExists[candidate] = true;
 
         uint leftover = msg.value - sybilResistantThresholdValue;
         msg.sender.transfer(leftover);
