@@ -10,7 +10,7 @@ Each Transcoder DAO Token is
 - A claim on the cash flow
 - A voting right for what the params should be.
 
-This token becomes a tradable ERC20 Token. Other people who do not want to participate in this DAO are still free to delegate stake to DAO. They are free to withdraw their token, without any restrictions. The downside is that they do not have an asset that is liquid, the tradeable ERC20 Token. On top of this token, people can now create derivatives products, bonds, that are rights to cash flows. This is an early experiment for larger DAOs. This is repeatable as any worker/stake based protocol should be able to run as a DAO.
+This token becomes a tradable ERC20 Token. Other people who do not want to participate in this DAO are still free to delegate stake to DAO. They are free to withdraw their token, without any restrictions. The downside is that they do not have an asset that is liquid, the tradable ERC20 Token. On top of this token, people can now create derivatives products, bonds, that are rights to cash flows. This is an early experiment for larger DAOs. This is repeatable as any worker/stake based protocol should be able to run as a DAO.
 
 ## Secifications
 
