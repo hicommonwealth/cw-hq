@@ -1,7 +1,9 @@
 {
   "name": "identity-litepaper",
   "version": "0.1.0",
-  "contracts": {},
+  "contracts": {
+    "IdentityCouncil": "IdentityCouncil"
+  },
   "stdlib": {
     "name": "openzeppelin-zos",
     "version": "^1.9.4"
