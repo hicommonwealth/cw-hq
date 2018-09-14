@@ -50,6 +50,91 @@ contract IdentityCouncil is Initializable {
         emit CouncilSetup(sybilResistantThresholdValue, quorumThreshold, getCouncil());
     }
 
+    function voteOnCandidateProposal(uint proposalIndex) isCouncilMember public {
+        require( proposalIndex != 0 );
+        require( candidateProposals.length - 1 >= proposalIndex );
+
+        address sender = council[councilIndex[msg.sender]];
+        require( !votedOnCandidateProposal[sender][proposalIndex] );
+
+        CandidateProposal memory p = candidateProposals[proposalIndex];
+
+        // Assert the proposal has not been deleted at this index
+        // so that completed candidateProposals do not receive votes after
+        require( p.candidate != address(0x0) );
+
+        p.voteCount += councilMemberWeight[sender];
+        votedOnCandidateProposal[sender][proposalIndex] = true;
+
+        if (isVoteSuccess(p.voteCount)) {
+            if (p.voteType) {
+                addCouncilMember(p.candidate);                
+            } else {
+                removeCouncilMember(p.candidate);
+            }
+
+            delete candidateProposals[proposalIndex];
+            delete candidateProposalExists[p.candidate];
+        }
+
+        emit CandidateProposalVotedOn(p.candidate, p.voteCount, p.voteType);
+    }
+
+    function addCouncilMember(address candidate) internal {
+        require( candidate != address(0x0) );
+
+        // If candidate is already council member, do nothing
+        if (councilIndex[candidate] > 0) {
+            return;
+        }
+
+        uint index = council.length++;
+        councilIndex[candidate] = index;
+        council[index] = candidate;
+        councilMemberWeight[candidate] = 1;
+
+        emit CouncilMemberAdded(candidate, getCouncilSize());
+    }
+
+    function removeCouncilMember(address candidate) internal {
+        uint index = councilIndex[candidate];
+        delete council[index];
+        delete councilIndex[candidate];
+
+        resizeCouncilArray(index);
+        emit CouncilMemberRemoved(candidate, getCouncilSize());
+    }
+
+    function proposeCandidate(address candidate, bool voteType) payable public {
+        require( candidate != address(0x0) );
+
+        // A proposal must pay the sybil fee
+        require( msg.value >= sybilResistantThresholdValue );
+
+        // There should not exist an open proposal to add or remove a candidate
+        require( !candidateProposalExists[candidate] );
+
+        // A proposal to add (remove) a candidate should 
+        // fail if the candidate is in (not in) the council 
+        require( (voteType)
+            ? (councilIndex[candidate] == 0) 
+            : councilIndex[candidate] > 0
+        );
+
+        candidateProposals.push(CandidateProposal({
+            candidate: candidate,
+            voteType: voteType,
+            voteCount: 0
+        }));
+
+
+        emit CandidateProposalCreated(candidate, candidateProposals.length - 1, msg.value);
+        candidateProposalExists[candidate] = true;
+
+        uint leftover = msg.value - sybilResistantThresholdValue;
+        msg.sender.transfer(leftover);
+    }
+
     function isVoteSuccess(uint count) internal constant returns (bool) {
         // Calculate fraction of votes = voteCount / council.length
         uint frac = SafeMath.div(SafeMath.mul(1 ether, count), getCouncilSize());
@@ -94,9 +179,4 @@ contract IdentityCouncil is Initializable {
     
 }
 
-contract ProposalManager {
-    function contractName () {
-        
-    }    
-}
 
