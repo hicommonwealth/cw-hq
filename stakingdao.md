@@ -1,5 +1,4 @@
 # Staking DAO
-## Background
 
 If we're going to have a world where coordination happens mainly in DAOs and protocols, then we need to actually have experiments where these actually are in product in use.
 
@@ -24,12 +23,12 @@ This token becomes a tradable ERC20 Token. Other people who do not want to parti
   - gracefully dies, when there are no LPT staked within it anymore
   - Burn vote token to unbond, and call withdraw after the right time period.
 
-# **Current Limitation**
+## Current Limitation
 
 - The only limitation for the protocol that we are build for (Livepeer) is that the protocol does not allow withdraws to a cold wallet/smart contract address this is something that Doug and co are working on.
 - Funds will be withdrawn every single week, and moved to the this fund wallet, where individuals can then vote to direct funds towards
 
-# Questions
+## Questions
 
 - Key management
 - Returning tokens that are not of the specified delegated token type
@@ -37,7 +36,7 @@ This token becomes a tradable ERC20 Token. Other people who do not want to parti
 - Lock the underlying collateral, the set of LPT that people have added to only allow for staking with the Livepeer Staking contract
   - Hardcode this address in and add a modifier before committing to a function call.
 
-# Future Work
+## Future Work
 
 There are many different experiments to be run. Our approach is again to build to spec/specific use case and generalize from there.
 
