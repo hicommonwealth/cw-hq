@@ -2,7 +2,7 @@
 
 Commonwealth Labs
 
-Dillon Chen, Drew Stone, Raymond Zhong
+Dillon Chen (dillon@commonwealth.im), Drew Stone (drew@commonwealth.im), Raymond Zhong (raymond@commonwealth.im)
 
 ## Abstract [to edit]
 
@@ -52,7 +52,7 @@ Nevertheless, we do believe that ERC725 has several missing pieces that need to 
 
 ## 3.1. The ERC725 standard and smart contracts
 
-[TODO: insert ERC725 snippet that describes what the standard does]
+ERC 725 manages on-chain identity and stores associated public keys (on the Ethereum blockchain). The ERC725 identity contract contains a signature proving that the owner of the contract controls a particular claim to their identity, while the interface is specified, what a standard claim represents comes down to the implementation.
 
 ## 3.2. Standard claims
 
@@ -73,15 +73,11 @@ There are cases in which the data for claims are necessary, but need to be verif
 - Holder of the identity can present unencrypted version of `data` off-chain, and the recipient can verify that the `data` presented was signed by `key`, and that `key` is a valid claim-signing key in this ERC725 identity.
 - An example claim of this form may be a "private financial identity claim" as one that contains data about one's private identity as it may be used in governance of financial applications. Shall take the form of: (TBD)
 
-## 3.3. Common namespace
+## 3.3. Root authority (Identity Council)
 
-TODO
+While we have defined a standard claims issuance, the set of claims issuers that may be useful to a set of protocols still remains undefined. The Identity Council acts as a root authority to curate other claims issuers for this purpose. This is analogous to the trusted certificate store that ships with browsers. These issuers are trusted third parties, hereafter referred to as a TTP. 
 
-## 3.4. Root authority (Identity Council)
-
-While we have defined a standard claims issuance, the set of claims that may be useful to a set of protocols still remains undefined. The Identity Council acts as a root authority to curate other claims issuers for this purpose. This is analogous to the trusted certificate store that ships with browsers. These issuers are trusted third parties, hereafter referred to as a TTP. 
-
-Within this Council, Commonwealth will be the initial stakeholder. Functioning as a DAO, this organization will allow stakeholders in the Identity Council to propose and vote on potential additions and deletions of TTP claims issuers. 
+Within this Council, Commonwealth will be among one of several community selected parties to curate issuers. Functioning as a DAO, this organization will allow stakeholders in the Identity Council to propose and vote on potential additions and deletions of TTP claims issuers. 
 
     **DAO Mechanics for the Identity Council
     - A set of 'n' Issuers are each holders of a vote token.
@@ -94,7 +90,7 @@ In the long term, the set of TTP issuers within the Council may grow substantial
 
 While this system itself may not involve many privacy enhancing technologies past private voting, it should provide transparency to the evolution of verified credential issuers in the Commonwealth Protocol that are responsible for issuing public or private claims on identities following ERC725 and ERC735 standards. 
 
-## 3.5. Decentralized claim issuance (TCR-based claim issuer)
+## 3.4. Decentralized claim issuance (TCR-based claim issuer)
 
 The previous sections have discussed what individual claims come to mean and who forms the set of suitable claim issuers. Now, we detail the case in which a claim issuer is itself a decentralized authority, a TCR. Users who successfully pass the submission (and potential challenge) process of a TCR can thereafter submit the inclusion in the TCR as a claim to other protocols. 
 
@@ -108,7 +104,7 @@ Upon inclusion in the TCR, the user is able to anonymously interact with any con
 
 Constructions exist so that the membership set of the TCR can be reused in multiple merkle trees. This allows for multiple anonymous interactions, such as votes. Futhermore, claims issuers themselves be anonymous, constructions may come in the form of rings or ZKPs. We again defer discussion of such constructions to further papers. 
 
-## 3.6. User interfaces and developer tools
+## 3.5. User interfaces and developer tools
 
 The process of creating a self-sovereign blockchain identity is confusing and highly technical. Additionally, it can be easier for developers to integrate blockchain identity into their app. We have implemented services to make these processes easier:
 
