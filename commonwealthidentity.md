@@ -14,7 +14,7 @@ On the Internet, email addresses have emerged as a de facto standard for user id
 
 However, several areas of blockchain applications that have only recently been deployed in the real world benefit strongly from some form of persistent user identity:
 
-- Lending and underwriting insurance are infeasibly risky unless the lender/underwriter knows the identity of their counterparty.
+- Lending and underwriting insurance are infeasible and risky unless the lender/underwriter knows the identity of their counterparty.
 - Protocol governance is difficult to conduct if voters only know each other pseudonymously.
 - Credit scoring, curation networks, and other social applications benefit if verifiable real names can be used on the blockchain.
 
@@ -106,7 +106,7 @@ Upon inclusion in the TCR, the user is able to anonymously interact with any con
 2. They send a hashed secret to the contract. This is used to build an incremental merkle tree for proving membership. 
 3. The contract checks `msg.sender` to ensure that they have only submitted one secret to the contract ensuring that `msg.sender` can only vote or interact with the contract one. 
 
-Constructions exist so that the membership set of the TCR can be reused in multiple merkle trees. This allows for multiple anonymous interactions, such as votes. Futhermore, claims issuers themselves be anonymous, constructions may come in the form of rings or ZKPs. We again defer discussion of such constructions to further papers. 
+Constructions exist so that the membership set of the TCR can be reused in multiple merkle trees. This allows for multiple anonymous interactions, such as votes. Furthermore, claims issuers themselves be anonymous, constructions may come in the form of rings or ZKPs. We again defer discussion of such constructions to further papers. 
 
 ## 3.6. User interfaces and developer tools
 
