@@ -138,15 +138,67 @@ Within this system, there are paths for obtaining public and private credentials
     }
 
 ***RingBallot***
+```
+// Adapted from Clearmatics Mixer
 
-    pragma solidity ^0.4.22;
+pragma solidity ^0.4.22;
+
+import '../crypto/LinkableRing.sol';
+import '../token/ERC223ReceivingContract.sol';
+import '../token/ERC20Compatible.sol';
+
+contract RingBallot {
+    using LinkableRing for LinkableRing.Data;
     
-    import './KeyHolder.sol';
-    import './LinkableRing.sol';
-    
-    contract RingBallot {
-    
+    struct Data {
+        bytes32 guid;
+        uint256 denomination;
+        address token;
+        LinkableRing.Data ring;
+        bool usingCommitments;
+        mapping (uint256 => bytes32) commitments;
+        mapping (uint256 => bool) revealed;
+        bytes32[] votes;
     }
+
+    mapping(bytes32 => Data) internal m_rings;
+    mapping(uint256 => bytes32) internal m_pubx_to_ring;
+    mapping(bytes32 => bytes32) internal m_filling;
+    uint256 internal m_ring_ctr;
+
+    event RingBallotDeposit(bytes32 indexed ring_id, uint256 indexed pub_x, address token, uint256 value);
+    event RingBallotVote(bytes32 indexed ring_id, uint256 tag_x, address uint256 value, bytes32 vote);
+    event RingBallotReveal(bytes32 indexed ring_id, uint256 tag_x, address token, uint256 value, bytes32 vote);
+    event RingBallotReady( bytes32 indexed ring_id, bytes32 message );
+    event RingBallotDead( bytes32 indexed ring_id, bytes32[] votes );
+
+    function lookupFillingRing (address token, uint256 denomination)
+        internal returns (bytes32, Data storage);
+    function message(bytes32 ring_guid)
+        public view returns (bytes32);
+    function depositEther(address token, uint256 denomination, uint256 pub_x, uint256 pub_y, bool usingCommitments)
+        public payable returns (bytes32);
+    function depositERC20Compatible(address token, uint256 denomination, uint256 pub_x, uint256 pub_y, bool usingCommitments)
+        public returns (bytes32);
+    function voteWithEther(bytes32 ring_id, uint256 tag_x, uint256 tag_y, uint256[] ctlist, bytes32 commitment)
+        public returns (bool);
+    function voteWithERC20Compatible(bytes32 ring_id, uint256 tag_x, uint256 tag_y, uint256[] ctlist, bytes32 commitment)
+        public returns (bool);
+    function revealWithEther(bytes32 ring_id, uint256 tag_x, bytes32 vote)
+        public returns (bool);
+    function revealWithERC20Compatible(bytes32 ring_id, uint256 tag_x, bytes32 vote)
+        public returns (bool);
+    function lookupFillingRing(address token, uint256 denomination, bool usingCommitments)
+        internal returns (bytes32, Data storage);
+    function depositLogic(address token, uint256 denomination, uint256 pub_x, uint256 pub_y, bool usingCommitments)
+        internal returns (bytes32);
+    function voteLogic(bytes32 ring_id, uint256 tag_x, uint256 tag_y, uint256[] ctlist, bytes32 commitment)
+        internal returns (Data);
+    function revealLogic(bytes32 ring_id, uint256 tag_x, bytes32 vote)
+        internal returns (Data);
+		function votePrice(uint amount) constant returns (uint);
+}
+```
 
 ## Conclusion
 
