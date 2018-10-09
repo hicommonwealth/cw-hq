@@ -18,8 +18,8 @@
 */
 
 import Promise from 'bluebird';
-import assertRevert from '../helpers/assertRevert';
-import decodeLogs from '../helpers/decodeLogs';
+import assertRevert from '../../helpers/assertRevert';
+import decodeLogs from '../../helpers/decodeLogs';
 
 const IdentityCouncil = artifacts.require("./IdentityCouncil.sol");
 
