@@ -84,7 +84,7 @@ contract('LockDrop', (accounts) => {
 
     const logs = await watchEvent(contract, { event: 'Deposit' });
     assert.equal(logs[0].args.sender, accounts[0]);
-    assert.equal(logs[0].args.value.toNumber(), 1);
+    assert.equal(logs[0].args.value.toNumber(), web3.toWei(1, 'ether'));
     assert.equal(logs[0].args.length.toNumber(), 1);
   });
 
