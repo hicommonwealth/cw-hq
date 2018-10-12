@@ -1,6 +1,7 @@
 pragma solidity ^0.4.24;
 
 import "openzeppelin-zos/contracts/math/SafeMath.sol";
+import "openzeppelin-zos/contracts/math/Math.sol";
 import "../token/EdgewareERC20.sol";
 
 /**
@@ -16,6 +17,9 @@ contract LockDrop {
     uint public tokenCapcity;
     uint public totalDeposits;
     uint public totalEffectiveDeposits;
+    uint public initialValuation;
+    uint public globalPriceFloor;
+
     uint public beginning;
     uint public ending;
     uint public maxLength;
@@ -31,11 +35,12 @@ contract LockDrop {
     event Unlock(address sender, uint value);
     event Withdraw(address sender, uint effectiveValue);
 
-    constructor(uint _lockPeriod, uint _maxLength, uint _tokenCapacity) public {
+    constructor(uint _lockPeriod, uint _tokenCapacity, uint _initialValuation, uint _priceFloor) public {
         beginning = now;
         ending = now + (1 days * _lockPeriod);
         tokenCapacity = _tokenCapacity;
-        maxLength = _maxLength;
+        initialValuation = _initialValuation;
+        globalPriceFloor = _priceFloor;
     }
 
     /**
@@ -48,9 +53,17 @@ contract LockDrop {
         require( msg.value > 0 );
         require( isValidLength(_length) );
 
-        effectiveAmount = effectiveDepositValue(msg.value, _length);
-        totalDeposits += msg.value;
-        totalEffectiveDeposits += effectiveAmount;
+        discountAmount = discountedDepositValue(msg.value, _length);
+        totalDeposits = SafeMath.add(totalDeposits, msg.value);
+        totalEffectiveDeposits = SafeMath.add(totalEffectiveDeposits, effectiveAmount);
+
+        // TODO: Make sure price floor and initial valuation are valid units
+        uint price = Math.max256(globalPriceFloor, SafeMath.div(totalDeposits, initialValuation));
+        uint effectiveAmount = SafeMath.mul(discountAmount, price);
+
+        // Ensure effectiveAmount is less than tokens left
+        require( effectiveAmount < tokenCapcity );
+        tokenCapcity = SafeMath.sub(tokenCapcity, effectiveAmount);
 
         // Create deposit with paid amount and specified length
         // of time. The lock ending is determined as the specified
@@ -58,7 +71,7 @@ contract LockDrop {
         Lock memory l = Lock({
             amount: msg.value,
             effectiveAmount: effectiveAmount,
-            lockEnding: ending + (_length * 1 days)
+            lockEnding: SafeMath.add(ending, SafeMath.mul(_length, 1 days));
         });
 
         // Push new deposit
@@ -110,9 +123,7 @@ contract LockDrop {
         }
 
         msg.sender.transfer(amount);
-
-        uint allocation = (effectiveAmount * tokenCapacity) / totalEffectiveDeposits;
-        EdgewareERC20.mint(msg.sender, allocation);
+        EdgewareERC20.mint(msg.sender, effectiveAmount);
 
         emit Withdraw(msg.sender, amount);
     }
@@ -134,6 +145,8 @@ contract LockDrop {
         } else {
             revert();
         }
+
+        return effectiveValue;
     }
 
     function isValidLength(uint length) internal constant returns (bool) {
@@ -146,8 +159,10 @@ contract LockDrop {
         } else if (length == 730 days) {
             continue;
         } else {
-            revert();
+            return false;
         }
+
+        return true;
     }
     
 
