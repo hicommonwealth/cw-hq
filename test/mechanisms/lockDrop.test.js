@@ -145,5 +145,43 @@ contract('LockDrop', (accounts) => {
         from: accounts[0],
       }));
     });
+
+
+    it('should lock up ~1000 token and send them upon withdrawl', async function() {
+      let remainingCapacity = tokenCapacity;
+
+      async function lockup(accountIndex) {
+        await contract.lock(THREE_MONTHS, {
+          from: accounts[accountIndex],
+          value: web3.toWei(1, 'ether'),
+        });
+
+        const logs = await watchEvent(contract, { event: 'Deposit' });
+        remainingCapacity -= logs[0].args.effectiveValue.toNumber();
+      }
+
+      async function withdraw(accountIndex) {
+        const lockCount = await contract.getTotalLocks.call(accounts[accountIndex]);
+        const beforeBalance = await EdgewareERC20.balanceOf(accounts[accountIndex]);
+
+        if (lockCount > 0) {
+          await contract.withdraw({
+            from: accounts[accountIndex]
+          });
+
+          const afterBalance = await EdgewareERC20.balanceOf(accounts[accountIndex]);
+          assert.ok(beforeBalance.toNumber() < afterBalance.toNumber());
+        }
+      }
+
+      while (remainingCapacity > tokenCapacity - 1e3) {
+        await lockup(getRandomInt(0, 9));
+        console.log(remainingCapacity);
+      }
+
+      await accounts.map( async (a, inx) => {
+        await withdraw(inx);
+      });
+    });
   });
 });
