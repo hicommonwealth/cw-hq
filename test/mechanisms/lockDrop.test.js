@@ -10,27 +10,28 @@ const LockDrop = artifacts.require("./LockDrop.sol");
 contract('LockDrop', (accounts) => {
   let contract;
 
-  // 10 ether
-  let capacity = 1e19;
+  let lockPeriod = 1;
+  let tokenCapacity = 1e27;
+  let initialValuation = 1e16;
+  let priceFloor = 1
 
-  // 1 day lock drop window
-  let lockPeriodInDays = 1;
-
-  // Max length of 1 day lock
-  let maxLengthInDays = 1;
+  const THREE_MONTHS = 91;
+  const SIX_MONTHS = 182;
+  const ONE_YEARS = 365;
+  const TWO_YEARS = 730;
+  const THREE_YEARS = 1095;
 
   beforeEach(async () => {
-    contract = await LockDrop.new(lockPeriodInDays, maxLengthInDays, capacity);
+    contract = await LockDrop.new(lockPeriod, tokenCapacity, initialValuation, priceFloor);;
   });
 
   it('should initialize with the correct parameters', async function () {
-    assert.equal((await contract.capacity()).toNumber(), capacity);
+    assert.equal((await contract.tokenCapacity()).toNumber(), tokenCapacity);
     
     const beginning = (await contract.beginning()).toNumber();
     const ending = (await contract.ending()).toNumber();
 
-    assert.equal(beginning + lockPeriodInDays * 86400, ending);
-    assert.equal((await contract.maxLength()).toNumber(), maxLengthInDays);
+    assert.equal(beginning + lockPeriod * 86400, ending);
   });
 
   it('should fail to lock 0 ether', async function () {
@@ -54,7 +55,7 @@ contract('LockDrop', (accounts) => {
   });
 
   it('should fail to withdraw with no locks', async function () {
-    await advanceTimeAndBlock((lockPeriodInDays * 86400) + 1);
+    await advanceTimeAndBlock((lockPeriod * 86400) + 1);
     assert.ok(await contract.hasEnded());
     await assertRevert(contract.withdraw({
       from: accounts[0],
@@ -69,15 +70,22 @@ contract('LockDrop', (accounts) => {
   });
 
   it('should fail to lock after lock period has passed', async function () {
-    await advanceTimeAndBlock((lockPeriodInDays * 86400) + 1);
+    await advanceTimeAndBlock((lockPeriod * 86400) + 1);
     await assertRevert(contract.lock(0, {
       from: accounts[0],
       value: web3.toWei(1, 'ether'),
     }));
   });
 
+  it('should fail to lock with an invalid lock length', async function () {
+    await assertRevert(contract.lock(1, {
+      from: accounts[0],
+      value: web3.toWei(1, 'ether'),
+    }));
+  });
+
   it('should lock 1 eth', async function () {
-    await contract.lock(1, {
+    await contract.lock(THREE_MONTHS, {
       from: accounts[0],
       value: web3.toWei(1, 'ether'),
     });
@@ -85,13 +93,12 @@ contract('LockDrop', (accounts) => {
     const logs = await watchEvent(contract, { event: 'Deposit' });
     assert.equal(logs[0].args.sender, accounts[0]);
     assert.equal(logs[0].args.value.toNumber(), web3.toWei(1, 'ether'));
-    assert.equal(logs[0].args.length.toNumber(), 1);
   });
 
   it('should unlock 1 eth', async function () {
     const wayBeforeBalance = (await getBalance(accounts[0])).toNumber();
 
-    await contract.lock(1, {
+    await contract.lock(THREE_MONTHS, {
       from: accounts[0],
       value: web3.toWei(1, 'ether'),
     });

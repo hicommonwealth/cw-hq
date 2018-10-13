@@ -14,7 +14,9 @@ import "../token/EdgewareERC20.sol";
  * to the chosen locking schedule.
  */
 contract LockDrop {
-    uint public tokenCapcity;
+    EdgewareERC20 EDG;
+
+    uint public tokenCapacity;
     uint public totalDeposits;
     uint public totalEffectiveDeposits;
     uint public initialValuation;
@@ -22,10 +24,10 @@ contract LockDrop {
 
     uint public beginning;
     uint public ending;
-    uint public maxLength;
 
     struct Lock {
         uint amount;
+        uint effectiveAmount;
         uint lockEnding;
     }
 
@@ -41,6 +43,8 @@ contract LockDrop {
         tokenCapacity = _tokenCapacity;
         initialValuation = _initialValuation;
         globalPriceFloor = _priceFloor;
+
+        EDG = new EdgewareERC20();
     }
 
     /**
@@ -49,11 +53,12 @@ contract LockDrop {
      */
     function lock(uint _length) payable public {
         require( hasNotEnded() );
-        require( _length <= maxLength );
         require( msg.value > 0 );
-        require( isValidLength(_length) );
 
-        discountAmount = discountedDepositValue(msg.value, _length);
+        uint dayLength = SafeMath.mul(_length, 1 days);
+        require( isValidLength(dayLength) );
+
+        uint discountAmount = discountedDepositValue(msg.value, dayLength);
         totalDeposits = SafeMath.add(totalDeposits, msg.value);
         totalEffectiveDeposits = SafeMath.add(totalEffectiveDeposits, effectiveAmount);
 
@@ -62,8 +67,8 @@ contract LockDrop {
         uint effectiveAmount = SafeMath.mul(discountAmount, price);
 
         // Ensure effectiveAmount is less than tokens left
-        require( effectiveAmount < tokenCapcity );
-        tokenCapcity = SafeMath.sub(tokenCapcity, effectiveAmount);
+        require( effectiveAmount < tokenCapacity );
+        tokenCapacity = SafeMath.sub(tokenCapacity, effectiveAmount);
 
         // Create deposit with paid amount and specified length
         // of time. The lock ending is determined as the specified
@@ -71,7 +76,7 @@ contract LockDrop {
         Lock memory l = Lock({
             amount: msg.value,
             effectiveAmount: effectiveAmount,
-            lockEnding: SafeMath.add(ending, SafeMath.mul(_length, 1 days));
+            lockEnding: SafeMath.add(ending, dayLength)
         });
 
         // Push new deposit
@@ -123,12 +128,12 @@ contract LockDrop {
         }
 
         msg.sender.transfer(amount);
-        EdgewareERC20.mint(msg.sender, effectiveAmount);
+        EDG.mint(msg.sender, effectiveAmount);
 
         emit Withdraw(msg.sender, amount);
     }
 
-    function effectiveDepositValue(uint value, uint length) internal constant returns (uint) {
+    function discountedDepositValue(uint value, uint length) internal constant returns (uint) {
         uint effectiveValue = 0;
 
         // TODO: Ensure units are safe to use
@@ -151,18 +156,16 @@ contract LockDrop {
 
     function isValidLength(uint length) internal constant returns (bool) {
         if (length == 91 days) {
-            continue;
+            return true;
         } else if (length == 182 days) {
-            continue;
+            return true;
         } else if (length == 365 days) {
-            continue;
+            return true;
         } else if (length == 730 days) {
-            continue;
-        } else {
-            return false;
+            return true;
         }
 
-        return true;
+        return false;
     }
     
 
