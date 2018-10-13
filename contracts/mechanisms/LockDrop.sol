@@ -35,7 +35,7 @@ contract LockDrop {
 
     event Deposit(address sender, uint value, uint effectiveValue, uint ending);
     event Unlock(address sender, uint value);
-    event Withdraw(address sender, uint effectiveValue);
+    event Withdraw(address sender, uint value, uint effectiveValue);
 
     constructor(uint _lockPeriod, uint _tokenCapacity, uint _initialValuation, uint _priceFloor) public {
         beginning = now;
@@ -54,6 +54,7 @@ contract LockDrop {
     function lock(uint _length) payable public {
         require( hasNotEnded() );
         require( msg.value > 0 );
+        require( tokenCapacity > 0 );
 
         uint dayLength = SafeMath.mul(_length, 1 days);
         require( isValidLength(dayLength) );
@@ -91,8 +92,8 @@ contract LockDrop {
      * @param      _lockIndex  The deposit index to unlock
      */
     function unlock(uint _lockIndex) public {
-        require(hasNotEnded());
-        require(locks[msg.sender].length > _lockIndex);
+        require( hasNotEnded() );
+        require( locks[msg.sender].length > _lockIndex );
 
         // Save amount to memory and delete the lock
         Lock memory l = locks[msg.sender][_lockIndex];
@@ -130,7 +131,7 @@ contract LockDrop {
         msg.sender.transfer(amount);
         EDG.mint(msg.sender, effectiveAmount);
 
-        emit Withdraw(msg.sender, amount);
+        emit Withdraw(msg.sender, amount, effectiveAmount);
     }
 
     function discountedDepositValue(uint value, uint length) internal constant returns (uint) {
@@ -168,6 +169,9 @@ contract LockDrop {
         return false;
     }
     
+    function getTotalLocks(address sender) public constant returns (uint) {
+        return locks[sender].length;
+    }
 
     function hasNotEnded() public constant returns (bool) {
         return now <= ending;
