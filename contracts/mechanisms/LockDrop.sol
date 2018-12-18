@@ -63,9 +63,7 @@ contract LockDrop {
         totalDeposits = SafeMath.add(totalDeposits, msg.value);
         totalEffectiveDeposits = SafeMath.add(totalEffectiveDeposits, effectiveAmount);
 
-        // TODO: Make sure price floor and initial valuation are valid units
-        uint price = Math.max256(globalPriceFloor, SafeMath.div(totalDeposits, initialValuation));
-        uint effectiveAmount = SafeMath.mul(discountAmount, price);
+        uint effectiveAmount = SafeMath.mul(discountAmount, globalPriceFloor);
 
         // Ensure effectiveAmount is less than tokens left
         require( effectiveAmount < tokenCapacity );
