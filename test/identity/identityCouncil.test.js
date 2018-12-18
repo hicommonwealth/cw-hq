@@ -18,13 +18,13 @@
 */
 
 import Promise from 'bluebird';
-import assertRevert from '../helpers/assertRevert';
-import decodeLogs from '../helpers/decodeLogs';
+import assertRevert from '../../helpers/assertRevert';
+import decodeLogs from '../../helpers/decodeLogs';
 
 const IdentityCouncil = artifacts.require("./IdentityCouncil.sol");
 
 contract('IdentityCouncil', (accounts) => {
-  let app, contract;
+  let contract;
   let sybilAmt = 1;
   let quorumPt = 50;
   let trustedI = [];
