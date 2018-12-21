@@ -30,13 +30,15 @@ contract('LockDrop', (accounts) => {
   const TWO_YEARS = 730;
   const THREE_YEARS = 1095;
 
+  let EDGEWARE_PUBKEY = "0x0100000000000000000000000000000000000000000000000000000000000000";
+
   beforeEach(async () => {
     contract = await LockDrop.new(lockPeriod, tokenCapacity, initialValuation, priceFloor);;
   });
 
   it('should initialize with the correct parameters', async function () {
     assert.equal((await contract.tokenCapacity()).toNumber(), tokenCapacity);
-    
+
     const beginning = (await contract.beginning()).toNumber();
     const ending = (await contract.ending()).toNumber();
 
@@ -45,14 +47,14 @@ contract('LockDrop', (accounts) => {
 
   describe('Lock Tests', () => {
     it('should fail to lock 0 ether', async function () {
-      await assertRevert(contract.lock(0, {
+      await assertRevert(contract.lock(0, EDGEWARE_PUBKEY, {
         from: accounts[1],
         value: 0,
       }));
     });
 
     it('should fail to lock for a length greater than the maximum length', async function () {
-      await assertRevert(contract.lock(2, {
+      await assertRevert(contract.lock(2, EDGEWARE_PUBKEY, {
         from: accounts[1],
         value: web3.toWei(1, 'ether'),
       }));
@@ -60,28 +62,28 @@ contract('LockDrop', (accounts) => {
 
     it('should fail to lock after lock period has passed', async function () {
       await advanceTimeAndBlock((lockPeriod * 86400) + 1);
-      await assertRevert(contract.lock(0, {
+      await assertRevert(contract.lock(0, EDGEWARE_PUBKEY, {
         from: accounts[0],
         value: web3.toWei(1, 'ether'),
       }));
     });
 
     it('should fail to lock with an invalid lock length', async function () {
-      await assertRevert(contract.lock(1, {
+      await assertRevert(contract.lock(1, EDGEWARE_PUBKEY, {
         from: accounts[0],
         value: web3.toWei(1, 'ether'),
       }));
     });
 
     it('should lock 1 eth', async function () {
-      await contract.lock(THREE_MONTHS, {
+      await contract.lock(THREE_MONTHS, EDGEWARE_PUBKEY, {
         from: accounts[0],
         value: web3.toWei(1, 'ether'),
       });
 
       const logs = await watchEvent(contract, { event: 'Deposit' });
       assert.equal(logs[0].args.sender, accounts[0]);
-      assert.equal(logs[0].args.value.toNumber(), web3.toWei(1, 'ether'));
+      assert.equal(logs[0].args.receiver, EDGEWARE_PUBKEY);
     });
   });
 
@@ -93,7 +95,7 @@ contract('LockDrop', (accounts) => {
     });
 
     it('should fail to unlock after lock period has ended', async function() {
-      await contract.lock(THREE_MONTHS, {
+      await contract.lock(THREE_MONTHS, EDGEWARE_PUBKEY, {
         from: accounts[0],
         value: web3.toWei(1, 'ether'),
       });
@@ -103,7 +105,7 @@ contract('LockDrop', (accounts) => {
     it('should unlock 1 eth', async function () {
       const wayBeforeBalance = (await getBalance(accounts[0])).toNumber();
 
-      await contract.lock(THREE_MONTHS, {
+      await contract.lock(THREE_MONTHS, EDGEWARE_PUBKEY, {
         from: accounts[0],
         value: web3.toWei(1, 'ether'),
       });
@@ -135,7 +137,7 @@ contract('LockDrop', (accounts) => {
 
 
     it('should fail to withdraw before the ending has been reached', async function () {
-      await contract.lock(THREE_MONTHS, {
+      await contract.lock(THREE_MONTHS, EDGEWARE_PUBKEY, {
         from: accounts[0],
         value: web3.toWei(1, 'ether'),
       });
@@ -151,7 +153,7 @@ contract('LockDrop', (accounts) => {
       let remainingCapacity = tokenCapacity;
 
       async function lockup(accountIndex) {
-        await contract.lock(THREE_MONTHS, {
+        await contract.lock(THREE_MONTHS, EDGEWARE_PUBKEY, {
           from: accounts[accountIndex],
           value: web3.toWei(1, 'ether'),
         });

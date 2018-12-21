@@ -29,11 +29,13 @@ contract LockDrop {
         uint amount;
         uint effectiveAmount;
         uint lockEnding;
+        bytes32 receivingPubKey;
     }
 
     mapping (address => Lock[]) locks;
+    address[] participants;
 
-    event Deposit(address sender, uint value, uint effectiveValue, uint ending);
+    event Deposit(address sender, bytes32 receiver, uint effectiveValue, uint ending);
     event Unlock(address sender, uint value);
     event Withdraw(address sender, uint value, uint effectiveValue);
 
@@ -44,14 +46,15 @@ contract LockDrop {
         initialValuation = _initialValuation;
         globalPriceFloor = _priceFloor;
 
-        EDG = new EdgewareERC20();
+        // We aren't minting tokens through the contract anymore
+        // EDG = new EdgewareERC20();
     }
 
     /**
      * @dev        Lock function for participating in the lock drop
      * @param      _length  The length of time chosen for locking ether
      */
-    function lock(uint _length) payable public {
+    function lock(uint _length, bytes32 receivingPubKey) payable public {
         require( hasNotEnded() );
         require( msg.value > 0 );
         require( tokenCapacity > 0 );
@@ -75,14 +78,18 @@ contract LockDrop {
         Lock memory l = Lock({
             amount: msg.value,
             effectiveAmount: effectiveAmount,
-            lockEnding: SafeMath.add(ending, dayLength)
+            lockEnding: SafeMath.add(ending, dayLength),
+            receivingPubKey: receivingPubKey
         });
 
-        // Push new deposit
+        // Push new deposit and participant
+        if (locks[msg.sender].length == 0) {
+            participants.push(msg.sender);
+        }
         locks[msg.sender].push(l);
 
         // Emit Deposit event
-        emit Deposit(msg.sender, l.amount, l.effectiveAmount, l.lockEnding);
+        emit Deposit(msg.sender, l.receivingPubKey, l.effectiveAmount, l.lockEnding);
     }
     
     /**
@@ -127,7 +134,8 @@ contract LockDrop {
         }
 
         msg.sender.transfer(amount);
-        EDG.mint(msg.sender, effectiveAmount);
+        // We aren't minting tokens anymore on ETH side but rather EDGE side
+        // EDG.mint(msg.sender, effectiveAmount);
 
         emit Withdraw(msg.sender, amount, effectiveAmount);
     }
@@ -177,5 +185,17 @@ contract LockDrop {
 
     function hasEnded() public constant returns (bool) {
         return now > ending;
+    }
+
+    function getLocksForParticipant(address participant) public constant returns (bytes32[], uint256[]) {
+        bytes32[] memory pubKeys = new bytes32[](locks[participant].length);
+        uint256[] memory amounts = new uint256[](locks[participant].length);
+
+        for (uint i = 0; i < locks[participant].length; i++) {
+            pubKeys[i] = locks[participant][i].receivingPubKey;
+            amounts[i] = locks[participant][i].effectiveAmount;
+        }
+
+        return (pubKeys, amounts);
     }
 }
