@@ -23,12 +23,31 @@ const getLockDropLockers = () => {
     });
 
     results = await Promise.all(results);
-    console.log(results);
-  })
+
+    let balanceSheet = {};
+    results.forEach(result => {
+      result['0'].forEach((pub, inx) => {
+        if (pub in balanceSheet) {
+          balanceSheet[pub] += result['1'][inx];
+        } else {
+          balanceSheet[pub] = result['1'][inx];
+        }
+      });
+    });
+
+    let genesisConfigBalances = [];
+    for (key in balanceSheet) {
+      genesisConfigBalances.push([key, balanceSheet[key]]);
+    }
+
+    console.log(genesisConfigBalances);
+  });
 };
 
-const getLockDropBalance = async () => {
+const getLockDropBalance = () => {
   console.log('Fetching LockDrop balance');
+  web3.eth.getBalance(contract.options.address)
+  .then(console.log);
 };
 
 
