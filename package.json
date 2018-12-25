@@ -5,6 +5,7 @@
     "dependencies": {
         "bluebird": "^3.5.2",
         "openzeppelin-zos": "^1.9.4",
+        "web3": "^1.0.0-beta.37",
         "zos": "^1.4.2",
         "zos-lib": "^1.4.1"
     },
