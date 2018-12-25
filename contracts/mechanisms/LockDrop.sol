@@ -33,7 +33,7 @@ contract LockDrop {
     }
 
     mapping (address => Lock[]) locks;
-    address[] participants;
+    address[] public participants;
 
     event Deposit(address sender, bytes32 receiver, uint effectiveValue, uint ending);
     event Unlock(address sender, uint value);
@@ -185,6 +185,10 @@ contract LockDrop {
 
     function hasEnded() public constant returns (bool) {
         return now > ending;
+    }
+
+    function getAllParticipants() public constant returns (address[]) {
+        return participants;
     }
 
     function getLocksForParticipant(address participant) public constant returns (bytes32[], uint256[]) {
