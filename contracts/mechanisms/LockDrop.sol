@@ -1,108 +1,96 @@
 pragma solidity ^0.4.24;
 
-import "openzeppelin-zos/contracts/math/SafeMath.sol";
-import "openzeppelin-zos/contracts/math/Math.sol";
-import "../token/EdgewareERC20.sol";
+import "./Math.sol";
 
 /**
  * The LockDrop contract locks up funds of depositors
  * with a verifiable receipt/proof that can be used to
  * redeem tokens on a separate, compatible blockchain.
  * The tokens with be locked for a specified time length.
- * 
+ *
  * The tokens are minted at a rate that grows according
  * to the chosen locking schedule.
  */
-contract LockDrop {
-    EdgewareERC20 EDG;
+contract LockDrop is DSMath {
+    uint constant SIX_MONTHS = 182;
 
     uint public tokenCapacity;
-    uint public totalDeposits;
-    uint public totalEffectiveDeposits;
-    uint public initialValuation;
-    uint public globalPriceFloor;
-
-    uint public beginning;
+    uint public tokenPrice;
     uint public ending;
 
     struct Lock {
         uint amount;
-        uint effectiveAmount;
+        uint numOfTokens;
         uint lockEnding;
-        bytes32 receivingPubKey;
     }
 
     mapping (address => Lock[]) locks;
-    address[] public participants;
 
-    event Deposit(address sender, bytes32 receiver, uint effectiveValue, uint ending);
-    event Unlock(address sender, uint value);
-    event Withdraw(address sender, uint value, uint effectiveValue);
+    event Deposit(address indexed sender, uint value, uint lockDuration, bytes32 indexed receiver);
+    event Unlock(address indexed sender, uint value);
+    event Withdraw(address indexed sender, uint value);
 
-    constructor(uint _lockPeriod, uint _tokenCapacity, uint _initialValuation, uint _priceFloor) public {
-        beginning = now;
-        ending = now + (1 days * _lockPeriod);
+    modifier hasNotEnded() {
+        require(now <= ending, "lock-drop-ended");
+        _;
+    }
+
+    modifier hasEnded() {
+        require(now > ending, "lock-drop-still-active");
+        _;
+    }
+
+    constructor(uint _lockPeriodInDays, uint _tokenCapacity, uint _tokenPrice) public {
+        ending = add(now, mul(1 days, _lockPeriodInDays));
         tokenCapacity = _tokenCapacity;
-        initialValuation = _initialValuation;
-        globalPriceFloor = _priceFloor;
-
-        // We aren't minting tokens through the contract anymore
-        // EDG = new EdgewareERC20();
+        tokenPrice = _tokenPrice;
     }
 
     /**
      * @dev        Lock function for participating in the lock drop
-     * @param      _length  The length of time chosen for locking ether
+     * @param      _lengthInDays  Number of days chosen for locking ether
      */
-    function lock(uint _length, bytes32 receivingPubKey) payable public {
-        require( hasNotEnded() );
-        require( msg.value > 0 );
-        require( tokenCapacity > 0 );
+    function lock(uint _lengthInDays, bytes32 _receivingPubKey) payable public hasNotEnded {
+        require(msg.value > 0, "invalid-value");
+        require(tokenCapacity > 0, "no-more-tokens-available");
 
-        uint dayLength = SafeMath.mul(_length, 1 days);
-        require( isValidLength(dayLength) );
+        // Calculate the bonus we want to give to a sender based on lock duration
+        uint effectiveAmount = calculateEffectiveAmount(msg.value, _lengthInDays);
+        require(effectiveAmount >= tokenPrice, "insufficient-amount-for-minimum-purchase");
+        // Calculate how much tokens sender is buying
+        uint numOfTokens = effectiveAmount / tokenPrice;
 
-        uint discountAmount = discountedDepositValue(msg.value, dayLength);
-        totalDeposits = SafeMath.add(totalDeposits, msg.value);
-        totalEffectiveDeposits = SafeMath.add(totalEffectiveDeposits, effectiveAmount);
-
-        uint effectiveAmount = SafeMath.mul(discountAmount, globalPriceFloor);
-
-        // Ensure effectiveAmount is less than tokens left
-        require( effectiveAmount < tokenCapacity );
-        tokenCapacity = SafeMath.sub(tokenCapacity, effectiveAmount);
+        // Ensure effectiveAmount is less or equal than tokens left
+        require(numOfTokens <= tokenCapacity, "amount-exceeds-available-tokens");
+        tokenCapacity = sub(tokenCapacity, numOfTokens);
 
         // Create deposit with paid amount and specified length
         // of time. The lock ending is determined as the specified
         // time length after the ending of the lock up period in days.
         Lock memory l = Lock({
             amount: msg.value,
-            effectiveAmount: effectiveAmount,
-            lockEnding: SafeMath.add(ending, dayLength),
-            receivingPubKey: receivingPubKey
+            numOfTokens: numOfTokens,
+            lockEnding: add(ending, mul(_lengthInDays, 1 days))
         });
-
-        // Push new deposit and participant
-        if (locks[msg.sender].length == 0) {
-            participants.push(msg.sender);
-        }
         locks[msg.sender].push(l);
 
         // Emit Deposit event
-        emit Deposit(msg.sender, l.receivingPubKey, l.effectiveAmount, l.lockEnding);
+        emit Deposit(msg.sender, msg.value, _lengthInDays, _receivingPubKey);
     }
-    
+
     /**
      * @dev        Unlock function reverts the lock before the lock starts
      * @param      _lockIndex  The deposit index to unlock
      */
-    function unlock(uint _lockIndex) public {
-        require( hasNotEnded() );
-        require( locks[msg.sender].length > _lockIndex );
+    function unlock(uint _lockIndex) public hasNotEnded {
+        require(locks[msg.sender].length > _lockIndex, "lock-not-found");
 
         // Save amount to memory and delete the lock
         Lock memory l = locks[msg.sender][_lockIndex];
         delete locks[msg.sender][_lockIndex];
+
+        // Make the tokens available for other buyers
+        tokenCapacity = add(tokenCapacity, l.numOfTokens);
 
         // Send the funds back to owner
         msg.sender.transfer(l.amount);
@@ -114,92 +102,46 @@ contract LockDrop {
     /**
      * @dev        Withdraw function should withdraw all valid ether after lock
      */
-    function withdraw() public {
-        require( hasEnded() );
-        require( locks[msg.sender].length > 0 );
+    function withdraw() public hasEnded {
+        require(locks[msg.sender].length > 0, "no-locks-found");
 
         uint amount = 0;
-        uint effectiveAmount = 0;
 
         // Iterate over all locks
         for (uint i = 0; i < locks[msg.sender].length; i++) {
             Lock memory curr = locks[msg.sender][i];
-            
+
             // Aggregate deposit if ending has passed and lockEnding is valid
             if (now >= curr.lockEnding && curr.lockEnding != 0) {
-                amount = SafeMath.add(amount, curr.amount);
-                effectiveAmount = SafeMath.add(effectiveAmount, curr.effectiveAmount);
+                amount = add(amount, curr.amount);
                 delete locks[msg.sender][i];
             }
         }
+        // We dont want to spend users gas if there is no amount locked
+        require(amount > 0, "no-locked-amount-found");
 
         msg.sender.transfer(amount);
-        // We aren't minting tokens anymore on ETH side but rather EDGE side
-        // EDG.mint(msg.sender, effectiveAmount);
 
-        emit Withdraw(msg.sender, amount, effectiveAmount);
+        emit Withdraw(msg.sender, amount);
     }
 
-    function discountedDepositValue(uint value, uint length) internal constant returns (uint) {
-        uint effectiveValue = 0;
-
-        // TODO: Ensure units are safe to use
-        if (length == 91 days) {
-            effectiveValue = value;
-        } else if (length == 182 days) {
-            effectiveValue = (value * 3.75 ether) / 100 ether;
-        } else if (length == 365 days) {
-            effectiveValue = (value * 7.5 ether) / 100 ether;
-        } else if (length == 730 days) {
-            effectiveValue = (value * 15 ether) / 100 ether;
-        } else if (length == 1095 days) {
-            effectiveValue = (value * 15 ether) / 100 ether;
-        } else {
-            revert();
+    function calculateEffectiveAmount(uint _value, uint _length) public pure returns (uint _effectiveValue) {
+        if (_length < SIX_MONTHS) {
+          return _value;
         }
 
+        // maximum period is 2 years (4 * SIX_MONTHS)
+        uint period = min(4, _length / SIX_MONTHS);
+        uint bonus = mul(_value, mul(period, 3.75 ether)) / 100 ether;
+        uint effectiveValue = add(_value, bonus);
         return effectiveValue;
     }
 
-    function isValidLength(uint length) internal constant returns (bool) {
-        if (length == 91 days) {
-            return true;
-        } else if (length == 182 days) {
-            return true;
-        } else if (length == 365 days) {
-            return true;
-        } else if (length == 730 days) {
-            return true;
-        }
-
-        return false;
-    }
-    
-    function getTotalLocks(address sender) public constant returns (uint) {
-        return locks[sender].length;
+    function getTotalLocks(address _user) public view returns (uint _length) {
+        return locks[_user].length;
     }
 
-    function hasNotEnded() public constant returns (bool) {
-        return now <= ending;
-    }
-
-    function hasEnded() public constant returns (bool) {
-        return now > ending;
-    }
-
-    function getAllParticipants() public constant returns (address[]) {
-        return participants;
-    }
-
-    function getLocksForParticipant(address participant) public constant returns (bytes32[], uint256[]) {
-        bytes32[] memory pubKeys = new bytes32[](locks[participant].length);
-        uint256[] memory amounts = new uint256[](locks[participant].length);
-
-        for (uint i = 0; i < locks[participant].length; i++) {
-            pubKeys[i] = locks[participant][i].receivingPubKey;
-            amounts[i] = locks[participant][i].effectiveAmount;
-        }
-
-        return (pubKeys, amounts);
+    function getLockAt(address _user, uint _index) public view returns (uint amount, uint numOfTokens, uint lockEnding) {
+        return (locks[_user][_index].amount, locks[_user][_index].numOfTokens, locks[_user][_index].lockEnding);
     }
 }

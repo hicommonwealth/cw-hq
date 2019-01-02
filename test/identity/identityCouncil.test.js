@@ -1,4 +1,4 @@
-/*    
+/*
     copyright 2018 to the Commonwealth-HQ Authors
 
     This file is part of Commonwealth-HQ.
@@ -19,7 +19,6 @@
 
 import Promise from 'bluebird';
 import assertRevert from '../../helpers/assertRevert';
-import decodeLogs from '../../helpers/decodeLogs';
 
 const IdentityCouncil = artifacts.require("./IdentityCouncil.sol");
 

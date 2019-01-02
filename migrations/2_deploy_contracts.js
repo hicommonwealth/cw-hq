@@ -3,11 +3,10 @@ const LockDrop = artifacts.require("./LockDrop.sol");
 
 let lockPeriod = 3;
 let tokenCapacity = 1e27;
-let initialValuation = 1e16;
 let priceFloor = 1
 
 module.exports = function(deployer, network, accounts) {
-  deployer.deploy(LockDrop, lockPeriod, tokenCapacity, initialValuation, priceFloor)
+  deployer.deploy(LockDrop, lockPeriod, tokenCapacity, priceFloor)
 //  .then(async contract => {
 //    async function lock(account, pubKey) {
 //      await contract.lock(91, pubKey, {
