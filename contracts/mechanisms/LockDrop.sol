@@ -12,6 +12,7 @@ import "./Math.sol";
  * to the chosen locking schedule.
  */
 contract LockDrop is DSMath {
+    uint constant THREE_MONTHS = 91;
     uint constant SIX_MONTHS = 182;
 
     uint public tokenCapacity;
@@ -27,7 +28,7 @@ contract LockDrop is DSMath {
     mapping (address => Lock[]) locks;
 
     event Deposit(address indexed sender, uint value, uint lockDuration, bytes32 indexed receiver);
-    event Unlock(address indexed sender, uint value);
+    event Unlock(address indexed sender, uint lockIndex);
     event Withdraw(address indexed sender, uint value);
 
     modifier hasNotEnded() {
@@ -96,7 +97,7 @@ contract LockDrop is DSMath {
         msg.sender.transfer(l.amount);
 
         // Emit Unlock event
-        emit Unlock(msg.sender, l.amount);
+        emit Unlock(msg.sender, _lockIndex);
     }
 
     /**
@@ -126,6 +127,8 @@ contract LockDrop is DSMath {
     }
 
     function calculateEffectiveAmount(uint _value, uint _length) public pure returns (uint _effectiveValue) {
+        require(_length >= THREE_MONTHS, "invalid-lock-duration");
+
         if (_length < SIX_MONTHS) {
           return _value;
         }

@@ -138,7 +138,7 @@ contract('LockDrop', (accounts) => {
     const logArgs = tx.logs[0].args;
 
     assert.equal(logArgs.sender, accounts[0]);
-    assert.equal(logArgs.value.toString(), value.toString())
+    assert.equal(logArgs.lockIndex.toNumber(), 0)
   });
 
   it("should be able to withdraw locks after lock period ended", async () => {
