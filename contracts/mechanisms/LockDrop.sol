@@ -27,7 +27,7 @@ contract LockDrop is DSMath {
 
     mapping (address => Lock[]) locks;
 
-    event Deposit(address indexed sender, uint value, uint lockDuration, bytes32 indexed receiver);
+    event Deposit(address indexed sender, uint numOfTokens, bytes32 indexed receiver, uint lockIndex);
     event Unlock(address indexed sender, uint lockIndex);
     event Withdraw(address indexed sender, uint value);
 
@@ -54,6 +54,7 @@ contract LockDrop is DSMath {
     function lock(uint _lengthInDays, bytes32 _receivingPubKey) payable public hasNotEnded {
         require(msg.value > 0, "invalid-value");
         require(tokenCapacity > 0, "no-more-tokens-available");
+        require(_receivingPubKey != 0x0, "invalid-public-key");
 
         // Calculate the bonus we want to give to a sender based on lock duration
         uint effectiveAmount = calculateEffectiveAmount(msg.value, _lengthInDays);
@@ -76,7 +77,7 @@ contract LockDrop is DSMath {
         locks[msg.sender].push(l);
 
         // Emit Deposit event
-        emit Deposit(msg.sender, msg.value, _lengthInDays, _receivingPubKey);
+        emit Deposit(msg.sender, numOfTokens, _receivingPubKey, locks[msg.sender].length - uint(1));
     }
 
     /**
@@ -85,6 +86,8 @@ contract LockDrop is DSMath {
      */
     function unlock(uint _lockIndex) public hasNotEnded {
         require(locks[msg.sender].length > _lockIndex, "lock-not-found");
+        // Don't spend users gas if deposit is already unlocked
+        require(locks[msg.sender][_lockIndex].amount > 0, "deposit-already-unlocked");
 
         // Save amount to memory and delete the lock
         Lock memory l = locks[msg.sender][_lockIndex];

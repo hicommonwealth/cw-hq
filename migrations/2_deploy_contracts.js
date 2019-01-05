@@ -1,9 +1,8 @@
-const EdgewareERC20 = artifacts.require("./EdgewareERC20.sol");
 const LockDrop = artifacts.require("./LockDrop.sol");
 
-let lockPeriod = 3;
-let tokenCapacity = 1e27;
-let priceFloor = 1
+let lockPeriod = 1;
+let tokenCapacity = "1000000000000";
+let priceFloor = 1;
 
 module.exports = function(deployer, network, accounts) {
   deployer.deploy(LockDrop, lockPeriod, tokenCapacity, priceFloor)

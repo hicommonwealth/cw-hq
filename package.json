@@ -17,6 +17,7 @@
         "babel-preset-stage-2": "^6.24.1",
         "babel-preset-stage-3": "^6.17.0",
         "babel-register": "^6.23.0",
-        "eth-gas-reporter": "^0.1.12"
+        "eth-gas-reporter": "^0.1.12",
+        "truffle": "^5.0.1"
     }
 }

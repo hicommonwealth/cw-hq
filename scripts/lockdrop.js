@@ -2,13 +2,13 @@ require('dotenv').config();
 const program = require('commander');
 const Web3 = require('web3');
 const fs = require('fs');
-const EthereumTx = require('ethereumjs-tx');
+const getLockDropDeposits = require("../helpers/lockDropLogParser.js");
 
-const LOCKDROP_TESTNET_ADDRESS = "0x87c5eddf5b6d4b358b10c64bd71352ad566e7f10";
+const LOCKDROP_TESTNET_ADDRESS = "0x345ca3e014aaf5dca488057592ee47305d9b3e10";
 const LOCKDROP_JSON = JSON.parse(fs.readFileSync('./build/contracts/LockDrop.json').toString());
 const ETH_PRIVATE_KEY = process.env.ETH_PRIVATE_KEY;
 
-const web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:8545"));
+const web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:9545"));
 const contract = new web3.eth.Contract(LOCKDROP_JSON.abi, LOCKDROP_TESTNET_ADDRESS);
 
 program
@@ -16,72 +16,110 @@ program
   .option('-l, --lockers', 'lockers')
   .option('-b, --balance', 'balance')
   .option('-d, --deposit', 'deposit')
+  .option('-u, --unlock', 'unlock')
+  .option('-w, --withdraw', 'withdraw')
+  .option('--ending', 'ending')
   .option('--lockLength', 'lockLength')
   .option('--lockValue', 'lockValue')
+  .option('--pubKey', 'pubKey')
+  .option('--lockIndex', 'lockIndex')
   .parse(process.argv);
 
-const getLockDropLockers = () => {
-  console.log('Fetching LockDrop lockers with minted balance amounts');
-  contract.methods.getAllParticipants().call()
-  .then(async participants => {
-    let results = participants.map(async p => {
-      return await contract.methods.getLocksForParticipant(p).call();
-    });
-
-    results = await Promise.all(results);
-
-    let balanceSheet = {};
-    results.forEach(result => {
-      result['0'].forEach((pub, inx) => {
-        if (pub in balanceSheet) {
-          balanceSheet[pub] += result['1'][inx];
-        } else {
-          balanceSheet[pub] = result['1'][inx];
-        }
-      });
-    });
-
-    let genesisConfigBalances = [];
-    for (key in balanceSheet) {
-      genesisConfigBalances.push([key, balanceSheet[key]]);
-    }
-
-    console.log(genesisConfigBalances);
-  });
-};
-
-const depositIntoLockDrop = (length, value) => {
-    if (!length || !value) return new Error('Please input a length and value using --lockLength and --lockValue');
-    console.log(`Depositing ${amount} into LockDrop contract for ${length} days`);
-    web3.eth.getTransactionCount(account, function (err, nonce) {
-      var data = contract.methods.lock(length);
-      var tx = new EthereumTx({
-        nonce: nonce,
-        gasPrice: web3.utils.toHex(web3.utils.toWei('20', 'gwei')),
-        gasLimit: 200000,
-        to: contract.options.address,
-        value: value,
-        data: data,
-      });
-
-      tx.sign(ETH_PRIVATE_KEY);
-
-      var raw = '0x' + tx.serialize().toString('hex');
-      web3.eth.sendRawTransaction(raw, function (err, transactionHash) {
-        console.log(`Sent tx with hash: ${transactionHash}`);
-      });
-    });
+async function getCurrentTimestamp() {
+  const block = await web3.eth.getBlock("latest");
+  return block.timestamp;
 }
 
-const getLockDropBalance = () => {
-  console.log('Fetching LockDrop balance');
-  web3.eth.getBalance(contract.options.address)
-  .then(console.log);
+async function getFormattedLockDropLockers() {
+  console.log('Fetching LockDrop locked deposits...');
+  console.log("");
+  const [_, genesisConfigBalances] = await getLockDropDeposits(contract);
+  console.log(genesisConfigBalances);
 };
 
+async function depositIntoLockDrop(length, value, pubKey) {
+    console.log(`Depositing ${value} into LockDrop contract for ${length} days. Receiver: ${pubKey}`);
+    console.log("");
+    const coinbase = await web3.eth.getCoinbase();
+    const data = contract.methods.lock(length, pubKey).encodeABI();
+    const tx = await web3.eth.sendTransaction({
+      from: coinbase,
+      to: LOCKDROP_TESTNET_ADDRESS,
+      gas: 150000,
+      value,
+      data
+    });
+    console.log(`Transaction send: ${tx.transactionHash}`);
+}
 
-console.log('you ordered a pizza with: Locks and drops');
-if (program.lockers) getLockDropLockers();
+async function unlockDeposit(index) {
+  const coinbase = await web3.eth.getCoinbase();
+  console.log(`Unlocking deposit for account: ${coinbase} at index: ${index}`);
+  console.log("");
+  const data = contract.methods.unlock(index).encodeABI();
+  const tx = await web3.eth.sendTransaction({
+    from: coinbase,
+    to: LOCKDROP_TESTNET_ADDRESS,
+    gas: 100000,
+    data
+  });
+  console.log(`Transaction send: ${tx.transactionHash}`);
+}
+
+async function withdrawDeposit() {
+  const coinbase = await web3.eth.getCoinbase();
+  console.log(`Withdrawing deposit for account: ${coinbase}`);
+  console.log("");
+  const data = contract.methods.withdraw().encodeABI();
+  try {
+    const tx = await web3.eth.sendTransaction({
+      from: coinbase,
+      to: LOCKDROP_TESTNET_ADDRESS,
+      gas: 100000,
+      data
+    });
+    console.log(`Transaction send: ${tx.transactionHash}`);
+  } catch(e) {
+    console.log(e);
+  }
+}
+
+async function getLockDropBalance() {
+  console.log('Fetching LockDrop balance...');
+  console.log("");
+  const res = await web3.eth.getBalance(contract.options.address);
+  console.log(res);
+};
+
+async function getEnding() {
+  const coinbase = await web3.eth.getCoinbase();
+  const ending = await contract.methods.ending().call({from: coinbase});
+  const now = await getCurrentTimestamp();
+  console.log(`Ending in ${(ending - now) / 60} minutes`);
+}
+
+console.log("");
+console.log('You ordered a pizza with: Locks and drops');
+console.log("");
+
+if (program.lockers) getFormattedLockDropLockers();
+
 if (program.balance) getLockDropBalance();
-if (program.deposit) depositIntoLockDrop(program.lockLength, program.lockAmount);
 
+if (program.deposit) {
+  if (!program.lockLength || !program.lockValue || !program.pubKey) {
+    throw new Error('Please input a length and value using --lockLength, --lockValue and --pubKey');
+  }
+  depositIntoLockDrop(...program.args);
+}
+
+if (program.unlock) {
+  if (!program.lockIndex) {
+    throw new Error('Please specify lock index using --lockIndex');
+  }
+  unlockDeposit(...program.args);
+}
+
+if (program.withdraw) withdrawDeposit();
+
+if (program.ending) getEnding();

@@ -1,6 +1,7 @@
 import { getCurrentTimestamp, advanceTimeAndBlock } from '../../helpers/evmTime.js';
 import assertRevert from '../../helpers/assertRevert.js';
-const { toWei, toBN, padRight } = require('web3').utils;
+import getLockDropDeposits from "../../helpers/lockDropLogParser.js";
+const { toWei, toBN, padRight } = web3.utils;
 
 const LockDrop = artifacts.require("./LockDrop.sol");
 
@@ -78,9 +79,9 @@ contract('LockDrop', (accounts) => {
     const logArgs = tx.logs[0].args;
 
     assert.equal(logArgs.sender, accounts[0]);
-    assert.equal(logArgs.value.toString(), value.toString());
+    assert.equal(logArgs.numOfTokens.toString(), "10");
     assert.equal(logArgs.receiver, padRight("0x01", 64));
-    assert.equal(logArgs.lockDuration.toNumber(), daysInSixMonths);
+    assert.equal(logArgs.lockIndex.toNumber(), 0);
   });
 
   it("should be able to unlock deposit before the lockdrop end", async () => {
@@ -286,5 +287,113 @@ contract('LockDrop', (accounts) => {
     await assertRevert(lockDrop.calculateEffectiveAmount(maxValueToPass.add(toBN(1)).toString(), lengthInDays));
 
     // Not possible to test this since by the default accounts have only 100 eth
+  });
+
+  it("should be able to get all participants trought events after lock drop has ended", async () => {
+    const daysInSixMonths = 182;
+    const value = toBN(toWei("10", "ether"));
+    // key - 0x01
+    const key1 = padRight("0x01", 64);
+    await lockDrop.lock(daysInSixMonths, key1, {
+      value: value.toString()
+    });
+    await lockDrop.lock(daysInSixMonths, key1, {
+      value: value.toString()
+    });
+    await lockDrop.unlock(0);
+
+    // key - 0x02
+    const key2 = padRight("0x02", 64);
+    const account2 = accounts[2];
+    await lockDrop.lock(daysInSixMonths, key2, {
+      value: value.toString(),
+      from: account2
+    });
+    await lockDrop.lock(daysInSixMonths, key2, {
+      value: value.toString(),
+      from: account2
+    });
+    await lockDrop.unlock(1, {
+      from: account2
+    });
+
+    // key - 0x03
+    const key3 = padRight("0x03", 64);
+    const account3 = accounts[3];
+    await lockDrop.lock(daysInSixMonths, key3, {
+      value: value.toString(),
+      from: account3
+    });
+    await lockDrop.lock(daysInSixMonths, key3, {
+      value: value.toString(),
+      from: account3
+    });
+    await lockDrop.unlock(0, {
+      from: account3
+    });
+    await lockDrop.unlock(1, {
+      from: account3
+    });
+
+    // key - 0x04
+    const key4 = padRight("0x04", 64);
+    const account4 = accounts[4];
+    await lockDrop.lock(daysInSixMonths, key4, {
+      value: value.toString(),
+      from: account4
+    });
+    await lockDrop.lock(daysInSixMonths, key4, {
+      value: value.toString(),
+      from: account4
+    });
+    await lockDrop.lock(daysInSixMonths, key4, {
+      value: value.toString(),
+      from: account4
+    });
+    await lockDrop.unlock(2, {
+      from: account4
+    });
+
+    // key - 0x05
+    const key5 = padRight("0x05", 64);
+    const account5 = accounts[5];
+    await lockDrop.lock(daysInSixMonths, key5, {
+      value: value.toString(),
+      from: account5
+    });
+    await lockDrop.lock(daysInSixMonths, key5, {
+      value: value.toString(),
+      from: account5
+    });
+    await lockDrop.lock(daysInSixMonths, key5, {
+      value: value.toString(),
+      from: account5
+    });
+
+    await advanceTimeAndBlock(secondsInDay + 1);
+
+    const contract = new web3.eth.Contract(lockDrop.abi, lockDrop.address);
+    const [receivers, genesisConfigBalances] = await getLockDropDeposits(contract);
+
+    assert.equal(receivers[key1], "10");
+    assert.equal(receivers[key2], "10");
+    assert.equal(receivers[key3], "0");
+    assert.equal(receivers[key4], "20");
+    assert.equal(receivers[key5], "30");
+
+    assert.equal(genesisConfigBalances[0][0], key1);
+    assert.equal(genesisConfigBalances[0][1], "10");
+
+    assert.equal(genesisConfigBalances[1][0], key2);
+    assert.equal(genesisConfigBalances[1][1], "10");
+
+    assert.equal(genesisConfigBalances[2][0], key3);
+    assert.equal(genesisConfigBalances[2][1], "0");
+
+    assert.equal(genesisConfigBalances[3][0], key4);
+    assert.equal(genesisConfigBalances[3][1], "20");
+
+    assert.equal(genesisConfigBalances[4][0], key5);
+    assert.equal(genesisConfigBalances[4][1], "30");
   });
 });
