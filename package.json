@@ -7,7 +7,7 @@
         "dotenv": "^6.2.0",
         "openzeppelin-zos": "^1.9.4",
         "truffle-hdwallet-provider": "^1.0.1",
-        "zos": "^1.4.2",
+        "zos": "^2.0.2",
         "zos-lib": "^1.4.1"
     },
     "devDependencies": {
