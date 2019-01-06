@@ -4,12 +4,12 @@ export const advanceTimeAndBlock = async (time) => {
     await advanceTime(time);
     await advanceBlock();
 
-    return Promise.resolve(web3.eth.getBlock('latest'));
+    return getCurrentBlock();
 };
 
 export const advanceTime = (time) => {
     return new Promise((resolve, reject) => {
-        web3.currentProvider.sendAsync({
+        web3.currentProvider.send({
             jsonrpc: "2.0",
             method: "evm_increaseTime",
             params: [time],
@@ -23,15 +23,30 @@ export const advanceTime = (time) => {
 
 export const advanceBlock = () => {
     return new Promise((resolve, reject) => {
-        web3.currentProvider.sendAsync({
+        web3.currentProvider.send({
             jsonrpc: "2.0",
             method: "evm_mine",
             id: new Date().getTime()
         }, (err, result) => {
             if (err) { return reject(err); }
-            const newBlockHash = web3.eth.getBlock('latest').hash;
-
-            return resolve(newBlockHash)
+            web3.eth.getBlock("latest", function (err, res) {
+              if (err) reject(err);
+              resolve(res.hash);
+            });
         });
     });
 };
+
+export function getCurrentBlock() {
+  return new Promise((resolve, reject) => {
+    web3.eth.getBlock("latest", function (err, res) {
+      if (err) return reject(err);
+      resolve(res);
+    });
+  });
+}
+
+export async function getCurrentTimestamp() {
+  const block = await getCurrentBlock();
+  return block.timestamp;
+}

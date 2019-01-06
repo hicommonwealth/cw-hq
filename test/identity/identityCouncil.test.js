@@ -1,4 +1,4 @@
-/*    
+/*
     copyright 2018 to the Commonwealth-HQ Authors
 
     This file is part of Commonwealth-HQ.
@@ -19,7 +19,7 @@
 
 import Promise from 'bluebird';
 import assertRevert from '../../helpers/assertRevert';
-import decodeLogs from '../../helpers/decodeLogs';
+const { padRight } = web3.utils;
 
 const IdentityCouncil = artifacts.require("./IdentityCouncil.sol");
 
@@ -32,7 +32,7 @@ contract('IdentityCouncil', (accounts) => {
   const getBalance = (address) => new Promise((resolve, reject) => {
     web3.eth.getBalance(address, (err, res) => {
       if (err) reject(err);
-      else resolve(res.toNumber());
+      else resolve(res);
     })
   })
 
@@ -60,7 +60,7 @@ contract('IdentityCouncil', (accounts) => {
   });
 
   it('should fail to initialize with any zerod trusted identities', async function() {
-    await assertRevert(contract.initialize(sybilAmt, 0, [0]));
+    await assertRevert(contract.initialize(sybilAmt, 0, [padRight("0x0", 40)]));
   });
 
   it('should have no council members before initialization', async function () {
@@ -94,7 +94,7 @@ contract('IdentityCouncil', (accounts) => {
   it('should fail to create a proposal with a zero valued address', async function () {
     const voteTypeAddition = true;
     await contract.initialize(sybilAmt, quorumPt, trustedI);
-    await assertRevert(contract.proposeCandidate(0, voteTypeAddition, {
+    await assertRevert(contract.proposeCandidate(padRight("0x0", 40), voteTypeAddition, {
       from: accounts[1],
       value: 1,
     }));
