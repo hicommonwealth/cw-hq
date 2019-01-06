@@ -370,6 +370,16 @@ contract('LockDrop', (accounts) => {
       from: account5
     });
 
+    const key6 = padRight("0x06", 64);
+    const account6 = accounts[6];
+    await lockDrop.lock(daysInSixMonths, key6, {
+      value: value.toString(),
+      from: account6
+    });
+    await lockDrop.unlock(0, {
+      from: account6
+    });
+
     await advanceTimeAndBlock(secondsInDay + 1);
 
     const contract = new web3.eth.Contract(lockDrop.abi, lockDrop.address);
@@ -377,9 +387,11 @@ contract('LockDrop', (accounts) => {
 
     assert.equal(receivers[key1], "10");
     assert.equal(receivers[key2], "10");
-    assert.equal(receivers[key3], "0");
+    // Zero values are not saved
+    assert.isUndefined(receivers[key3]);
     assert.equal(receivers[key4], "20");
     assert.equal(receivers[key5], "30");
+    assert.isUndefined(receivers[key6]);
 
     assert.equal(genesisConfigBalances[0][0], key1);
     assert.equal(genesisConfigBalances[0][1], "10");
@@ -387,13 +399,12 @@ contract('LockDrop', (accounts) => {
     assert.equal(genesisConfigBalances[1][0], key2);
     assert.equal(genesisConfigBalances[1][1], "10");
 
-    assert.equal(genesisConfigBalances[2][0], key3);
-    assert.equal(genesisConfigBalances[2][1], "0");
+    assert.equal(genesisConfigBalances[2][0], key4);
+    assert.equal(genesisConfigBalances[2][1], "20");
 
-    assert.equal(genesisConfigBalances[3][0], key4);
-    assert.equal(genesisConfigBalances[3][1], "20");
+    assert.equal(genesisConfigBalances[3][0], key5);
+    assert.equal(genesisConfigBalances[3][1], "30");
 
-    assert.equal(genesisConfigBalances[4][0], key5);
-    assert.equal(genesisConfigBalances[4][1], "30");
+    assert.isUndefined(genesisConfigBalances[4]);
   });
 });

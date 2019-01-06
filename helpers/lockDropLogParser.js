@@ -30,10 +30,15 @@ async function getLockDropDeposits(contract) {
   const receivers = {};
   Object.keys(deposits).forEach((key) => {
     const receiver = deposits[key].receiver;
-    if (!receivers[receiver]) {
-      receivers[receiver] = "0";
+
+    let currentAmount = receivers[receiver];
+    if (!currentAmount) {
+      currentAmount = "0";
     }
-    receivers[receiver] = toBN(deposits[key].numOfTokens).add(toBN(receivers[receiver])).toString();
+    const amount = toBN(deposits[key].numOfTokens).add(toBN(currentAmount)).toString();
+    if (amount !== "0") {
+      receivers[receiver] = amount;
+    }
   });
 
   const genesisConfigBalances = Object.keys(receivers).map((key) => [key, receivers[key]]);
